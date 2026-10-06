@@ -1,0 +1,220 @@
+# ==============================================================================
+# Orazaka Router — application configuration
+# ------------------------------------------------------------------------------
+# SINGLE config file (no per-profile overlay). Every value is read from .env
+# (the single source of truth) via ${ENV_VAR:default} placeholders. Layout:
+#   1. server        2. spring (framework)      3. management / resilience / logging
+#   4. orazaka.* (by module: router · jobs · core · messaging · identity)
+#      Domain data (capabilities, interceptor toggles, model catalog, rate-limit
+#      tiers) lives in the DB, never here.
+# ==============================================================================
+
+server:
+  port: ${CONVERSATION_PORT:8080}
+
+# ── Spring framework ──────────────────────────────────────────────────────────
+spring:
+  application:
+    name: orazaka-router
+  # Loom: blocking I/O (DB, identity lookup, Ollama streaming) must not hold a platform thread.
+  # AGENTS.md §4 mandates it, and this is the service that needs it most — SSE streams are held
+  # open for the whole exchange, so on the default Tomcat pool 200 concurrent chats exhaust it.
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/orazaka_db}
+    username: ${SPRING_DATASOURCE_USERNAME:orazaka_app}
+    password: ${SPRING_DATASOURCE_PASSWORD:orazaka_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 60000
+      connection-timeout: 5000
+      leak-detection-threshold: 10000
+  sql:
+    init:
+      mode: never          # DDL/seed come from infra/init.sql, not Spring
+  flyway:
+    enabled: false
+
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:${SPRING_RABBITMQ_HOST:localhost}}
+    port: ${RABBITMQ_PORT:${SPRING_RABBITMQ_PORT:5672}}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+    # Propagate traceparent across the broker (producer + consumer observations).
+    template:
+      observation-enabled: true
+    listener:
+      simple:
+        observation-enabled: true
+        # Each consumer blocks for the full duration of its job, so a single
+        # consumer with the default (250) prefetch serializes every job behind
+        # the first long-running one (a 10-min video stalled a 1-min image for
+        # 6 min). prefetch=1 keeps a blocked consumer from hoarding the queue,
+        # and concurrency>=2 guarantees a free thread for a short job to run in
+        # parallel. Concurrency stays bounded on purpose: heavy media inference
+        # is memory-bound on a single machine, so prefetch is our backpressure.
+        concurrency: ${RABBITMQ_LISTENER_CONCURRENCY:2}
+        max-concurrency: ${RABBITMQ_LISTENER_MAX_CONCURRENCY:4}
+        prefetch: ${RABBITMQ_LISTENER_PREFETCH:1}
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        # Exponential backoff (AGENTS.md §6); exhausted retries dead-letter to <queue>.dlq.
+        retry:
+          enabled: true
+          max-attempts: ${RABBITMQ_RETRY_MAX_ATTEMPTS:2}
+          initial-interval: ${RABBITMQ_RETRY_INITIAL_INTERVAL:1s}
+          multiplier: 2.0
+          max-interval: 10s
+
+  servlet:
+    multipart:
+      # Buffer uploads in the JVM/Tomcat default temp dir. The application's served
+      # upload directory is the single typed source orazaka.router.uploads.directory.
+      max-file-size: 8MB
+      max-request-size: 8MB
+  mvc:
+    async:
+      request-timeout: ${ASYNC_TIMEOUT_MS:600000}
+
+
+  # Spring AI provider config intentionally ABSENT (ADR-029 + ADR-030).
+  # All provider base-url / api-key / model wiring is loaded from the DB (`ai_providers` +
+  # `orazaka_models`) and clients are built on demand by the Dynamic Model Router /
+  # Universal Proxy Client in orazaka-core. With the provider STARTERS removed there is no
+  # OpenAI/Ollama autoconfiguration to configure here, and no `spring.autoconfigure.exclude`
+  # is needed. Add/change providers in the DB (admin console), never in this file.
+
+# ── Operational (actuator · resilience · logging) ─────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+  # Distributed tracing (Phase 0): OTLP/HTTP export to the local Jaeger container.
+  otlp:
+    tracing:
+      endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+
+logging:
+  file:
+    name: ${ROUTER_LOG:var/logs/router.log}
+  logback:
+    rollingpolicy:
+      max-file-size: 1MB
+      total-size-cap: 10MB
+      max-history: 7
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.orazaka: ${LOGGING_LEVEL_ORAZAKA:DEBUG}
+    com.orazaka.core.application.engine.InfrastructureProber: INFO
+    org.springframework.security: ${LOGGING_LEVEL_SECURITY:DEBUG}
+    org.springframework.ai: DEBUG
+
+# ── Orazaka — organised by module ─────────────────────────────────────────────
+orazaka:
+  # Asset encryption (ADR-054). The master key is NOT in .env: it is the one secret whose
+  # compromise is total, and .env is the file that gets pasted, copied and mounted wholesale.
+  # accept-plaintext is a MIGRATION setting — a permanent tolerance is a permanent door.
+  assets:
+    encryption:
+      enabled: ${ASSETS_ENCRYPTION_ENABLED:true}
+      master-key-file: ${ASSETS_MASTER_KEY_FILE:${user.home}/.orazaka/master.key}
+      block-size: ${ASSETS_BLOCK_SIZE:65536}
+      accept-plaintext: ${ASSETS_ACCEPT_PLAINTEXT:false}
+  billing:
+    # Bootstrap switch only — the enforcement mode is a row owned by the billing
+    # service. Default OFF wires the no-op adapter, so this service behaves
+    # exactly as before until billing is deliberately turned on.
+    enabled: ${BILLING_ENABLED:false}
+    base-url: ${BILLING_INTERNAL_URL:http://localhost:8095}
+    # Mints the SERVICE token /internal/v1/billing requires (ADR-035). It was absent from
+    # every consumer, so BILLING_ENABLED=true crashed each of them at startup with "the
+    # shared identity secret is required" — billing had never been switched on anywhere.
+    service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+    connect-timeout: ${BILLING_CONNECT_TIMEOUT:500ms}
+    read-timeout: ${BILLING_READ_TIMEOUT:2s}
+  # orazaka-router (ingress): upload storage + serving.
+  router:
+    # The synchronous endpoints THIS service serves, and the capability behind each (ADR-069 §5).
+    # OperationGraphFilter refuses a request here when that capability's engine is unavailable —
+    # it used to find the path by reading uri_path off the capability row, a column that named
+    # door 1's deleted endpoints for every row but this one. Chat is genuinely synchronous and
+    # stays off the broker (AGENTS.md §6), so this gate is a live control and not a formality.
+    capability-endpoints:
+      paths:
+        "[/api/v1/chat]": orazaka.core.chat.completion
+    # Identity service internal API (principal/profile/tier/BYOK lookups, cached).
+    identity-directory:
+      base-url: ${IDENTITY_URL:http://localhost:8083}
+    uploads:
+      directory: ${UPLOAD_DIR:var/orazaka-uploads}
+      handler-path: ${UPLOADS_HANDLER_PATH:/uploads/**}
+      cache-period: ${UPLOADS_CACHE_PERIOD:0}
+
+  # Async job execution lifecycle (job-level timeout; HTTP timeout = spring.mvc.async.request-timeout).
+  jobs:
+    execution-timeout: ${JOBS_TIMEOUT_SECONDS:1800}
+
+  # CORS policy for the REST API (browser → BFF → router).
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+    allowed-headers: "Authorization,Content-Type,X-Requested-With,X-Orazaka-Context"
+    allow-credentials: true
+
+  # orazaka-core (cognition): RAG, interceptor pipeline.
+  core:
+    # default-provider REMOVED (ADR-030): the default provider/model is resolved from the
+    # DB by the Dynamic Model Router — `orazaka_models.is_default` per category gives the
+    # default model, whose `provider_name` + `ai_providers` row give the provider. No yaml.
+    rag:
+      enabled: true
+      store-type: pgvector
+      top-k: 3
+    # Knowledge service (RAG retrieve + tool source lookup) consumed by the core's HTTP port.
+    knowledge:
+      base-url: ${KNOWLEDGE_URL:http://localhost:8084}
+      # Mints the SERVICE token /internal/v1/knowledge now requires (ADR-035).
+      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+    orchestration:
+      # Master pipeline kill-switch only. Per-interceptor enable/order is DB-driven
+      # (pipeline_interceptor_config, read by PipelineRegistry/DynamicPipelineExecutor);
+      # refiner/router model wiring is sourced in CoreConfiguration, not yaml.
+      enabled: ${ORCHESTRATION_ENABLED:true}
+
+  # orazaka-messaging (RabbitMQ broker wiring).
+  messaging:
+    broker:
+      queue:
+        max-length: ${BROKER_QUEUE_MAX_LENGTH:1000}
+        overflow-strategy: ${BROKER_QUEUE_OVERFLOW:rejectPublish}
+
+  # Session-JWT validation only (contract copy of the shared HS256 secret the
+  # identity service signs with — local validation, no per-request identity hop).
+  # All other identity config moved to the identity service with the Phase 2 cutover.
+  identity:
+    jwt:
+      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+    # Master on/off switch only — the default tier is data (orazaka_rate_limits.is_default).
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:false}
+
+  # Capability registry moved to the DB (orazaka_capabilities, read via CapabilityProvider).
+  # The former orazaka.features.* blueprints + per-capability *_ENABLED toggles now live as
+  # rows (blueprint + is_enabled), per the config-vs-data rule. No yaml duplication.
