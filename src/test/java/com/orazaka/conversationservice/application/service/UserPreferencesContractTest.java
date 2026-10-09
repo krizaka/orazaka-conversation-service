@@ -76,10 +76,11 @@ class UserPreferencesContractTest {
             new UserProfile(
                 ACTOR,
                 "dark",
-                "alloy",
-                "tech",
-                "friendly",
-                Map.of("conversationId", "not-mine", "orazaka.metering.deferred", "true")));
+                attributes(
+                    Map.of("conversationId", "not-mine", "orazaka.metering.deferred", "true"),
+                    "alloy",
+                    "tech",
+                    "friendly")));
     EntitlementProvider entitlements = mock(EntitlementProvider.class);
     when(entitlements.forActor(any()))
         .thenReturn(
@@ -140,5 +141,15 @@ class UserPreferencesContractTest {
         properties,
         new SimpleMeterRegistry(),
         event -> {});
+  }
+
+  /** Orazaka's onboarding answers, as the users service stores them: plain profile attributes. */
+  private static Map<String, Object> attributes(
+      Map<String, Object> others, String voiceModel, String primaryIndustry, String aiBehavior) {
+    Map<String, Object> attributes = new java.util.HashMap<>(others);
+    attributes.put("voiceModel", voiceModel);
+    attributes.put("primaryIndustry", primaryIndustry);
+    attributes.put("aiBehavior", aiBehavior);
+    return attributes;
   }
 }
