@@ -120,8 +120,8 @@ logging:
       max-history: 7
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
-    com.orazaka: ${LOGGING_LEVEL_ORAZAKA:DEBUG}
-    com.orazaka.core.application.engine.InfrastructureProber: INFO
+    com.krizaka.orazaka: ${LOGGING_LEVEL_ORAZAKA:DEBUG}
+    com.krizaka.orazaka.core.application.engine.InfrastructureProber: INFO
     org.springframework.security: ${LOGGING_LEVEL_SECURITY:DEBUG}
     org.springframework.ai: DEBUG
 
