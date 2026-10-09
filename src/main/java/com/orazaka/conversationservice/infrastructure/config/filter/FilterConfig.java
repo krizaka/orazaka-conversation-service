@@ -1,6 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.config.filter;
 
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.conversationservice.infrastructure.config.CapabilityEndpointProperties;
 import com.orazaka.core.application.engine.GraphEngine;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
@@ -48,7 +48,7 @@ class FilterConfig {
   @Bean
   @ConditionalOnProperty(name = "orazaka.identity.rate-limit.enabled", havingValue = "true")
   Filter rateLimitFilter(
-      ProxyManager<String> proxyManager, UserDirectoryService userDirectoryService) {
+      ProxyManager<String> proxyManager, UserDirectoryClient userDirectoryService) {
     return new RateLimitFilter(proxyManager, userDirectoryService);
   }
 

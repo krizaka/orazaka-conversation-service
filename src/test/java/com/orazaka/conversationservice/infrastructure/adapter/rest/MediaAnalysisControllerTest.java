@@ -3,9 +3,9 @@ package com.orazaka.conversationservice.infrastructure.adapter.rest;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.conversationservice.infrastructure.adapter.rest.dto.UploadAssetResponse;
 import com.orazaka.core.domain.ports.outbound.KnowledgeService;
-import com.orazaka.identity.domain.model.User;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;

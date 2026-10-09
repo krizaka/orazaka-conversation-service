@@ -10,7 +10,7 @@
 
 - **Role:** Interactive ingress of the Orazaka engine: chat (SSE streaming), intents, models, pipeline, MCP and job APIs — translates transport into Intentions, never business logic.
 - **Layer:** Orazaka AI engine
-- **Depends on:** orazaka-build, orazaka-contracts, orazaka-users, orazaka-billing, orazaka-ai-engine — never on another repository's Tier-3 implementation (AGENTS.md §2, [SEAM-002]).
+- **Depends on:** orazaka-build, orazaka-contracts, krizaka-users, orazaka-billing, orazaka-ai-engine — never on another repository's Tier-3 implementation (AGENTS.md §2, [SEAM-002]).
 - **Workspace path:** `orazaka-apps/services/orazaka-conversation-service`
 
 ## Definition of done

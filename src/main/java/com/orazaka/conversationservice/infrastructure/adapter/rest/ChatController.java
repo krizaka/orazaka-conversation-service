@@ -1,5 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.conversationservice.application.service.ContextService;
 import com.orazaka.conversationservice.infrastructure.adapter.rest.dto.ChatStreamRequest;
 import com.orazaka.conversationservice.infrastructure.config.JobsProperties;
@@ -13,7 +14,6 @@ import com.orazaka.core.domain.model.chat.ChatResponse;
 import com.orazaka.core.domain.model.chat.ChatSessionInfo;
 import com.orazaka.core.domain.ports.inbound.AiClient;
 import com.orazaka.core.domain.ports.inbound.ChatSessionService;
-import com.orazaka.identity.domain.model.User;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;

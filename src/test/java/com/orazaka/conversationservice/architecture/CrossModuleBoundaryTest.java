@@ -50,10 +50,10 @@ class CrossModuleBoundaryTest {
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages(
                 "com.orazaka.core",
-                "com.orazaka.identity",
+                "com.krizaka.users",
                 "com.orazaka.tools",
                 "com.orazaka.persistence",
-                "com.orazaka.persistence.identity",
+                "com.krizaka.users.persistence",
                 "com.orazaka.interceptor",
                 "com.orazaka.conversationservice");
   }
@@ -78,7 +78,7 @@ class CrossModuleBoundaryTest {
         .dependOnClassesThat()
         .resideInAPackage(PKG_CORE)
         .because(
-            "orazaka-persistence-app and orazaka-persistence-identity are decoupled technical ledgers and must remain completely agnostic of orchestration and identity domains; the exceptions are EventAdapters and the orazaka-persistence-bridge adapter layer (com.orazaka.persistence.bridge), whose job is to implement the core's outbound ports")
+            "orazaka-persistence-app and krizaka-users-persistence are decoupled technical ledgers and must remain completely agnostic of orchestration and identity domains; the exceptions are EventAdapters and the orazaka-persistence-bridge adapter layer (com.orazaka.persistence.bridge), whose job is to implement the core's outbound ports")
         .check(allModuleClasses);
   }
 
@@ -142,7 +142,7 @@ class CrossModuleBoundaryTest {
         .dependOnClassesThat()
         .resideInAPackage(PKG_CORE)
         .because(
-            "orazaka-identity is a pure IAM domain hexagon and must never "
+            "krizaka-users-core is a pure IAM domain hexagon and must never "
                 + "import AI orchestration types from orazaka-core [ERR-102]")
         .check(allModuleClasses);
   }
@@ -156,7 +156,7 @@ class CrossModuleBoundaryTest {
         .should()
         .dependOnClassesThat()
         .resideInAPackage(PKG_TOOLS)
-        .because("orazaka-identity must never import tool implementations [ERR-102]")
+        .because("krizaka-users-core must never import tool implementations [ERR-102]")
         .check(allModuleClasses);
   }
 
@@ -216,10 +216,10 @@ class CrossModuleBoundaryTest {
     String[] modules = {
       "orazaka-core",
       "orazaka-conversation-service",
-      "orazaka-identity",
+      "krizaka-users-core",
       "orazaka-tools",
       "orazaka-persistence-app",
-      "orazaka-persistence-identity"
+      "krizaka-users-persistence"
     };
     List<Path> sourceRoots = new ArrayList<>();
     for (String module : modules) {

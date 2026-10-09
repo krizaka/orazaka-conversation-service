@@ -1,6 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest.dto;
 
-import com.orazaka.identity.domain.exception.InvalidRequestException;
+import com.krizaka.users.domain.exception.InvalidRequestException;
 import java.util.Map;
 
 /** Request DTO for video generation containing prompt, duration, model and settings parameters. */

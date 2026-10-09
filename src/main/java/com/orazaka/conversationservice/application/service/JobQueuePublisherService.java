@@ -1,5 +1,6 @@
 package com.orazaka.conversationservice.application.service;
 
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.jobs.domain.exception.UnroutableCapabilityException;
 import com.orazaka.jobs.domain.model.CapabilityRoute;
 import com.orazaka.jobs.domain.model.JobCommand;
@@ -34,20 +35,20 @@ public class JobQueuePublisherService {
 
   private final OutboxStore outboxStore;
   private final JdbcClient jdbcClient;
-  private final UserDirectoryService userDirectoryService;
+  private final UserDirectoryClient userDirectoryService;
   private final JobMeteringService jobMeteringService;
   private final CapabilityRoutingClient capabilityRoutingClient;
 
   public JobQueuePublisherService(
       OutboxStore outboxStore,
       JdbcClient jdbcClient,
-      UserDirectoryService userDirectoryService,
+      UserDirectoryClient userDirectoryService,
       JobMeteringService jobMeteringService,
       CapabilityRoutingClient capabilityRoutingClient) {
     this.outboxStore = Objects.requireNonNull(outboxStore, "OutboxStore cannot be null");
     this.jdbcClient = Objects.requireNonNull(jdbcClient, "JdbcClient cannot be null");
     this.userDirectoryService =
-        Objects.requireNonNull(userDirectoryService, "UserDirectoryService cannot be null");
+        Objects.requireNonNull(userDirectoryService, "UserDirectoryClient cannot be null");
     this.jobMeteringService =
         Objects.requireNonNull(jobMeteringService, "JobMeteringService cannot be null");
     this.capabilityRoutingClient =

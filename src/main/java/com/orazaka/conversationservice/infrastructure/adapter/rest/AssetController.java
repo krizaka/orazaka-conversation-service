@@ -1,7 +1,7 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.conversationservice.application.service.AssetService;
-import com.orazaka.identity.domain.model.User;
 import java.io.IOException;
 import java.util.Optional;
 import org.slf4j.Logger;

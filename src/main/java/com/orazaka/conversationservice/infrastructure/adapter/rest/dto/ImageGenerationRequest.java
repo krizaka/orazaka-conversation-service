@@ -1,6 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest.dto;
 
-import com.orazaka.identity.domain.exception.InvalidRequestException;
+import com.krizaka.users.domain.exception.InvalidRequestException;
 
 /** Request DTO for image generation containing prompt and model parameters. */
 public record ImageGenerationRequest(String prompt, String model) {

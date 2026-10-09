@@ -1,9 +1,9 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.exception.InvalidRequestException;
 import com.orazaka.billing.domain.exception.InsufficientCreditsException;
 import com.orazaka.core.application.pipeline.PipelineDisabledException;
 import com.orazaka.core.application.pipeline.PipelineShortCircuitException;
-import com.orazaka.identity.domain.exception.InvalidRequestException;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;

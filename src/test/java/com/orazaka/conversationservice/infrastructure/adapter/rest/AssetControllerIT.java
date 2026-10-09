@@ -8,12 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.assets.application.service.EncryptedAssetService;
 import com.orazaka.assets.infrastructure.adapter.FileMasterKeyProvider;
 import com.orazaka.assets.infrastructure.config.AssetEncryptionProperties;
 import com.orazaka.conversationservice.application.service.AssetService;
 import com.orazaka.conversationservice.infrastructure.config.RouterProperties;
-import com.orazaka.identity.domain.model.User;
 import com.orazaka.persistence.domain.model.JobDto;
 import com.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
 import java.nio.file.Files;

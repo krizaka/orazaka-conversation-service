@@ -2,7 +2,7 @@ package com.orazaka.conversationservice.infrastructure.adapter.rest.dto;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.orazaka.identity.domain.exception.InvalidRequestException;
+import com.krizaka.users.domain.exception.InvalidRequestException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

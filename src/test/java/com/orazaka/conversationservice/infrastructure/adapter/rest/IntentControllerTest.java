@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.business.api.Capability;
 import com.orazaka.business.api.ChatPayload;
 import com.orazaka.business.api.Intention;
@@ -13,7 +14,6 @@ import com.orazaka.business.api.UseCaseResolutionException;
 import com.orazaka.conversationservice.application.service.GateService;
 import com.orazaka.conversationservice.infrastructure.adapter.rest.dto.IntentionRequest;
 import com.orazaka.core.domain.model.chat.ChatResponse;
-import com.orazaka.identity.domain.model.User;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

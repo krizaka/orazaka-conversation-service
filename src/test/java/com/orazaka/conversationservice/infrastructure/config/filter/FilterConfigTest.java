@@ -3,7 +3,7 @@ package com.orazaka.conversationservice.infrastructure.config.filter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.core.application.engine.GraphEngine;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import jakarta.servlet.Filter;
@@ -42,7 +42,7 @@ class FilterConfigTest {
     runner
         .withPropertyValues("orazaka.identity.rate-limit.enabled=true")
         .withBean(ProxyManager.class, () -> mock(ProxyManager.class))
-        .withBean(UserDirectoryService.class, () -> mock(UserDirectoryService.class))
+        .withBean(UserDirectoryClient.class, () -> mock(UserDirectoryClient.class))
         .run(
             ctx -> {
               assertThat(ctx).hasBean("rateLimitFilter");

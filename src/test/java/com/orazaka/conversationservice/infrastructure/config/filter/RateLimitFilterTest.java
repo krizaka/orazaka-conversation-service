@@ -4,10 +4,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
-import com.orazaka.identity.domain.model.Persona;
-import com.orazaka.identity.domain.model.RateLimitInfo;
-import com.orazaka.identity.domain.model.User;
+import com.krizaka.users.domain.model.Persona;
+import com.krizaka.users.domain.model.RateLimitInfo;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.distributed.BucketProxy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
@@ -32,7 +32,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class RateLimitFilterTest {
 
   private ProxyManager<String> proxyManager;
-  private UserDirectoryService userDirectoryService;
+  private UserDirectoryClient userDirectoryService;
   private RateLimitFilter filter;
   private SecurityContext originalSecurityContext;
 
@@ -40,7 +40,7 @@ class RateLimitFilterTest {
   @SuppressWarnings("unchecked")
   void setUp() {
     proxyManager = mock(ProxyManager.class);
-    userDirectoryService = mock(UserDirectoryService.class);
+    userDirectoryService = mock(UserDirectoryClient.class);
     filter = new RateLimitFilter(proxyManager, userDirectoryService);
     originalSecurityContext = SecurityContextHolder.getContext();
     SecurityContextHolder.setContext(SecurityContextHolder.createEmptyContext());

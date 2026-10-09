@@ -6,6 +6,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.model.UserProfile;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.billing.domain.model.CreditHoldCommand;
 import com.orazaka.billing.domain.model.CreditHoldResponse;
 import com.orazaka.billing.domain.model.EntitlementSnapshot;
@@ -21,8 +24,6 @@ import com.orazaka.core.domain.model.PromptContext;
 import com.orazaka.core.domain.model.RoutingMode;
 import com.orazaka.core.infrastructure.config.CoreProperties;
 import com.orazaka.core.infrastructure.config.SecurityProperties;
-import com.orazaka.identity.domain.model.User;
-import com.orazaka.identity.domain.model.UserProfile;
 import com.orazaka.interceptor.governance.EntitlementInterceptor;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
@@ -69,7 +70,7 @@ class UserPreferencesContractTest {
             Map.of("userId", VICTIM, "orazaka.metering.deferred", true),
             null,
             "free");
-    UserDirectoryService directory = mock(UserDirectoryService.class);
+    UserDirectoryClient directory = mock(UserDirectoryClient.class);
     when(directory.getProfile(ACTOR))
         .thenReturn(
             new UserProfile(

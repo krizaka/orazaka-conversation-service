@@ -21,8 +21,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * REST controller exposing the CLI agent SSE streaming endpoint for reverse AMQP tunneling.
  *
  * <p>When {@code orazaka-cli agent listen} connects, it establishes a persistent SSE stream. The
- * router authenticates via {@code orazaka-identity} and publishes a {@code cli.online} heartbeat to
- * RabbitMQ. Incoming automation payloads are proxied through the open tunnel to the CLI.
+ * router authenticates via {@code krizaka-users-core} and publishes a {@code cli.online} heartbeat
+ * to RabbitMQ. Incoming automation payloads are proxied through the open tunnel to the CLI.
  */
 @RestController
 @RequestMapping("/api/v1/agent")

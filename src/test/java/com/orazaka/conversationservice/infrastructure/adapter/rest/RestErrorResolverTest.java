@@ -2,7 +2,7 @@ package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.orazaka.identity.domain.exception.InvalidRequestException;
+import com.krizaka.users.domain.exception.InvalidRequestException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

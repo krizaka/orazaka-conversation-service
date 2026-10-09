@@ -8,6 +8,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.krizaka.users.domain.model.Persona;
+import com.krizaka.users.domain.model.User;
 import com.orazaka.conversationservice.application.service.ContextService;
 import com.orazaka.conversationservice.infrastructure.adapter.rest.dto.ChatStreamRequest;
 import com.orazaka.conversationservice.infrastructure.config.JobsProperties;
@@ -20,8 +22,6 @@ import com.orazaka.core.domain.model.chat.ChatRequest;
 import com.orazaka.core.domain.model.chat.ChatResponse;
 import com.orazaka.core.domain.ports.inbound.AiClient;
 import com.orazaka.core.domain.ports.inbound.ChatSessionService;
-import com.orazaka.identity.domain.model.Persona;
-import com.orazaka.identity.domain.model.User;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;

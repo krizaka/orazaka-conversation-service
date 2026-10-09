@@ -1,8 +1,8 @@
 package com.orazaka.conversationservice.infrastructure.config;
 
 import com.krizaka.security.web.SecurityBaseline;
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
-import com.orazaka.identity.domain.model.User;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import jakarta.servlet.Filter;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -42,14 +42,14 @@ public class SecurityConfig {
   private static final String ADMIN = "ROLE_ADMIN";
   private static final String USER = "ROLE_USER";
 
-  private final UserDirectoryService userDirectoryService;
+  private final UserDirectoryClient userDirectoryService;
   private final JwtDecoder identityJwtDecoder;
   private final CorsProperties corsProperties;
   private final Filter operationGraphFilter;
   private final Optional<Filter> rateLimitFilter;
 
   public SecurityConfig(
-      UserDirectoryService userDirectoryService,
+      UserDirectoryClient userDirectoryService,
       @Qualifier("sessionJwtDecoder") JwtDecoder identityJwtDecoder,
       CorsProperties corsProperties,
       @Qualifier("operationGraphFilter") Filter operationGraphFilter,

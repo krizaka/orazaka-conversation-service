@@ -1,12 +1,12 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.exception.InvalidRequestException;
+import com.krizaka.users.domain.model.User;
 import com.orazaka.conversationservice.application.service.JobQueuePublisherService;
 import com.orazaka.conversationservice.application.service.JobStreamService;
 import com.orazaka.core.domain.model.job.JobInfo;
 import com.orazaka.core.domain.ports.inbound.ChatSessionService;
 import com.orazaka.core.domain.ports.inbound.JobService;
-import com.orazaka.identity.domain.exception.InvalidRequestException;
-import com.orazaka.identity.domain.model.User;
 import io.lettuce.core.api.StatefulRedisConnection;
 import java.util.List;
 import java.util.Map;

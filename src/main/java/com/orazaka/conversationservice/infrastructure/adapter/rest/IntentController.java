@@ -1,5 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.business.api.AgentPayload;
 import com.orazaka.business.api.Capability;
 import com.orazaka.business.api.ChatPayload;
@@ -19,7 +20,6 @@ import com.orazaka.conversationservice.domain.model.intent.IntentEnvelope;
 import com.orazaka.conversationservice.domain.model.intent.IntentToken;
 import com.orazaka.conversationservice.infrastructure.adapter.rest.dto.IntentionRequest;
 import com.orazaka.core.domain.model.Context;
-import com.orazaka.identity.domain.model.User;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

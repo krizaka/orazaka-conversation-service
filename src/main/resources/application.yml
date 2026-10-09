@@ -159,9 +159,6 @@ orazaka:
     capability-endpoints:
       paths:
         "[/api/v1/chat]": orazaka.core.chat.completion
-    # Identity service internal API (principal/profile/tier/BYOK lookups, cached).
-    identity-directory:
-      base-url: ${IDENTITY_URL:http://localhost:8083}
     uploads:
       directory: ${UPLOAD_DIR:var/orazaka-uploads}
       handler-path: ${UPLOADS_HANDLER_PATH:/uploads/**}
@@ -218,6 +215,13 @@ orazaka:
 
 # ── Krizaka platform kit ──────────────────────────────────────────────────────
 krizaka:
+  users:
+    client:
+      # The users service's internal API (krizaka-users-client): who the acting user is, their
+      # profile, provider keys and rate-limit tier. Every call carries a SERVICE token.
+      base-url: ${IDENTITY_URL:http://localhost:8083}
+      service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+      service-name: orazaka-conversation-service
   security:
     jwt:
       # The shared HS256 secret the identity service signs session and service tokens with.

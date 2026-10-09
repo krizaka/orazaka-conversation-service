@@ -1,10 +1,10 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.assets.application.service.EncryptedAssetService;
 import com.orazaka.conversationservice.infrastructure.adapter.rest.dto.UploadAssetResponse;
 import com.orazaka.conversationservice.infrastructure.support.PathResolver;
 import com.orazaka.core.domain.ports.outbound.KnowledgeService;
-import com.orazaka.identity.domain.model.User;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;

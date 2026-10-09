@@ -51,7 +51,7 @@ class EngineArchitectureTest {
         .haveSimpleNameEndingWith("Filter")
         .should()
         .dependOnClassesThat()
-        .haveFullyQualifiedName("com.orazaka.identity.service.IdentityService")
+        .haveFullyQualifiedName("com.krizaka.users.service.IdentityService")
         .because(
             "Custom security filters must not bypass official Spring Security token decoding or authority checks")
         .check(allAppClasses);
@@ -118,17 +118,17 @@ class EngineArchitectureTest {
   }
 
   @Test
-  @DisplayName("Classes in com.orazaka.core.. do not depend on com.orazaka.identity.repository..")
+  @DisplayName("Classes in com.orazaka.core.. do not depend on com.krizaka.users.repository..")
   void coreDoesNotDependOnIdentityRepository() {
     noClasses()
         .that()
         .resideInAPackage("com.orazaka.core..")
         .should()
         .dependOnClassesThat()
-        .resideInAPackage("com.orazaka.identity.repository..")
+        .resideInAPackage("com.krizaka.users.repository..")
         .orShould()
         .dependOnClassesThat()
-        .resideInAPackage("com.orazaka.identity.infrastructure.persistence.repository..")
+        .resideInAPackage("com.krizaka.users.infrastructure.persistence.repository..")
         .because(
             "Core must interact solely through high-level public Identity interface contracts, never repository/persistence layers")
         .check(allAppClasses);

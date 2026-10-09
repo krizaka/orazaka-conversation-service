@@ -1,6 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.adapter.persistence;
 
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.core.domain.ports.outbound.UserCredentialsProvider;
 import java.util.Objects;
 import java.util.Optional;
@@ -12,11 +12,11 @@ import org.springframework.stereotype.Service;
 @Service
 class UserCredentialsProviderAdapter implements UserCredentialsProvider {
 
-  private final UserDirectoryService userDirectoryService;
+  private final UserDirectoryClient userDirectoryService;
 
-  UserCredentialsProviderAdapter(UserDirectoryService userDirectoryService) {
+  UserCredentialsProviderAdapter(UserDirectoryClient userDirectoryService) {
     this.userDirectoryService =
-        Objects.requireNonNull(userDirectoryService, "UserDirectoryService must not be null");
+        Objects.requireNonNull(userDirectoryService, "UserDirectoryClient must not be null");
   }
 
   @Override

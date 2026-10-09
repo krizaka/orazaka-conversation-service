@@ -35,6 +35,11 @@
             <groupId>com.krizaka</groupId>
             <artifactId>krizaka-security</artifactId>
         </dependency>
+        <!-- The users service's internal API, typed (UserDirectoryClient). -->
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-users-client</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-assets</artifactId>
@@ -81,8 +86,8 @@
              contract (User/UserProfile/RateLimitInfo + shared exceptions) remains; identity
              data is reached over the service's internal API (HttpUserDirectoryAdapter). -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-identity-api</artifactId>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-users-api</artifactId>
         </dependency>
 
         <!-- Tier-1 job-plane contract: the JobCommand wire record this service publishes. One

@@ -3,14 +3,14 @@ package com.orazaka.conversationservice.infrastructure.adapter.rest;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.users.domain.exception.InvalidRequestException;
+import com.krizaka.users.domain.model.User;
 import com.orazaka.conversationservice.application.service.JobQueuePublisherService;
 import com.orazaka.conversationservice.application.service.JobStreamService;
 import com.orazaka.core.domain.model.job.JobInfo;
 import com.orazaka.core.domain.model.job.JobStatus;
 import com.orazaka.core.domain.ports.inbound.ChatSessionService;
 import com.orazaka.core.domain.ports.inbound.JobService;
-import com.orazaka.identity.domain.exception.InvalidRequestException;
-import com.orazaka.identity.domain.model.User;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import java.time.Instant;

@@ -1,6 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest.dto;
 
-import com.orazaka.identity.domain.exception.InvalidRequestException;
+import com.krizaka.users.domain.exception.InvalidRequestException;
 
 /**
  * Request DTO representing the parameters for a code-generation task.

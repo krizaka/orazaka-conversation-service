@@ -3,8 +3,8 @@ package com.orazaka.conversationservice.infrastructure.config;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
-import com.orazaka.identity.domain.model.User;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import jakarta.servlet.Filter;
 import java.time.Instant;
 import java.util.List;
@@ -27,7 +27,7 @@ import org.springframework.web.cors.CorsConfiguration;
 
 class SecurityConfigTest {
 
-  private UserDirectoryService userDirectoryService;
+  private UserDirectoryClient userDirectoryService;
   private CorsProperties corsProperties;
   private Filter operationGraphFilter;
   private Filter rateLimitFilter;
@@ -36,7 +36,7 @@ class SecurityConfigTest {
 
   @BeforeEach
   void setUp() {
-    userDirectoryService = mock(UserDirectoryService.class);
+    userDirectoryService = mock(UserDirectoryClient.class);
     identityJwtDecoder = mock(JwtDecoder.class);
     corsProperties = mock(CorsProperties.class);
     operationGraphFilter = mock(Filter.class);

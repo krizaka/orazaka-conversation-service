@@ -3,13 +3,13 @@ package com.orazaka.conversationservice.infrastructure.adapter.persistence;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class UserCredentialsProviderAdapterTest {
 
-  private final UserDirectoryService userDirectoryService = mock(UserDirectoryService.class);
+  private final UserDirectoryClient userDirectoryService = mock(UserDirectoryClient.class);
   private final UserCredentialsProviderAdapter provider =
       new UserCredentialsProviderAdapter(userDirectoryService);
 

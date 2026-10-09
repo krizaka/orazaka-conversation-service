@@ -3,9 +3,9 @@ package com.orazaka.conversationservice.infrastructure.adapter.rest;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.users.domain.model.User;
 import com.orazaka.core.domain.model.mcp.McpToolInfo;
 import com.orazaka.core.domain.ports.inbound.McpService;
-import com.orazaka.identity.domain.model.User;
 import com.orazaka.persistence.domain.model.PlatformMcpServerDto;
 import com.orazaka.persistence.domain.model.UserMcpServerDto;
 import com.orazaka.persistence.domain.ports.inbound.PlatformMcpServerPersistenceProvider;

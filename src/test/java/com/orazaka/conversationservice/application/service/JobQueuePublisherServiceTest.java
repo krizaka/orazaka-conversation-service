@@ -3,6 +3,7 @@ package com.orazaka.conversationservice.application.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.orazaka.billing.domain.exception.InsufficientCreditsException;
 import com.orazaka.billing.domain.model.BillableCapability;
 import com.orazaka.jobs.domain.model.JobCommand;
@@ -23,7 +24,7 @@ class JobQueuePublisherServiceTest {
 
   @Mock private OutboxStore outboxStore;
   @Mock private JdbcClient jdbcClient;
-  @Mock private UserDirectoryService userDirectoryService;
+  @Mock private UserDirectoryClient userDirectoryService;
   @Mock private JobMeteringService jobMeteringService;
 
   /**

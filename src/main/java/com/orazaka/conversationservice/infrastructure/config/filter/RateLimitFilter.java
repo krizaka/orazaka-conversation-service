@@ -1,8 +1,8 @@
 package com.orazaka.conversationservice.infrastructure.config.filter;
 
-import com.orazaka.conversationservice.application.service.UserDirectoryService;
-import com.orazaka.identity.domain.model.RateLimitInfo;
-import com.orazaka.identity.domain.model.User;
+import com.krizaka.users.domain.model.RateLimitInfo;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.port.UserDirectoryClient;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.BucketConfiguration;
@@ -46,7 +46,7 @@ class RateLimitFilter extends OncePerRequestFilter {
   private static final String UNRESOLVED_TIER = "__unresolved__";
 
   private final ProxyManager<String> proxyManager;
-  private final UserDirectoryService userDirectoryService;
+  private final UserDirectoryClient userDirectoryService;
   private final ConcurrentHashMap<String, CachedTier> cache = new ConcurrentHashMap<>();
 
   /**
@@ -57,7 +57,7 @@ class RateLimitFilter extends OncePerRequestFilter {
    *     DB-flagged default tier.
    */
   public RateLimitFilter(
-      ProxyManager<String> proxyManager, UserDirectoryService userDirectoryService) {
+      ProxyManager<String> proxyManager, UserDirectoryClient userDirectoryService) {
     this.proxyManager = proxyManager;
     this.userDirectoryService = userDirectoryService;
   }

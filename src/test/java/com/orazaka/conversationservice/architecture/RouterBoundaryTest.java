@@ -89,7 +89,7 @@ class RouterBoundaryTest {
         .resideInAPackage("com.orazaka.conversationservice.domain.model..")
         .should()
         .dependOnClassesThat()
-        .resideInAPackage("com.orazaka.identity.domain..")
+        .resideInAPackage("com.krizaka.users.domain..")
         .because(
             "DTO layer must be domain-blind — domain-to-DTO mapping happens at factory boundary [ERR-106]")
         .check(routerClasses);
@@ -103,7 +103,7 @@ class RouterBoundaryTest {
         .resideInAPackage("com.orazaka.conversationservice.infrastructure.adapter..")
         .should()
         .dependOnClassesThat()
-        .resideInAPackage("com.orazaka.identity.infrastructure.persistence.entity..")
+        .resideInAPackage("com.krizaka.users.infrastructure.persistence.entity..")
         .because(
             "Endpoints must interact with identity only through service interfaces and DTOs [ERR-102]")
         .check(routerClasses);
