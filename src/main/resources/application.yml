@@ -205,12 +205,9 @@ orazaka:
         max-length: ${BROKER_QUEUE_MAX_LENGTH:1000}
         overflow-strategy: ${BROKER_QUEUE_OVERFLOW:rejectPublish}
 
-  # Session-JWT validation only (contract copy of the shared HS256 secret the
-  # identity service signs with — local validation, no per-request identity hop).
-  # All other identity config moved to the identity service with the Phase 2 cutover.
+  # Session-JWT validation moved to krizaka.security.jwt (krizaka-security, below); all other
+  # identity config moved to the identity service with the Phase 2 cutover.
   identity:
-    jwt:
-      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
     # Master on/off switch only — the default tier is data (orazaka_rate_limits.is_default).
     rate-limit:
       enabled: ${RATE_LIMIT_ENABLED:false}
@@ -218,3 +215,12 @@ orazaka:
   # Capability registry moved to the DB (orazaka_capabilities, read via CapabilityProvider).
   # The former orazaka.features.* blueprints + per-capability *_ENABLED toggles now live as
   # rows (blueprint + is_enabled), per the config-vs-data rule. No yaml duplication.
+
+# ── Krizaka platform kit ──────────────────────────────────────────────────────
+krizaka:
+  security:
+    jwt:
+      # The shared HS256 secret the identity service signs session and service tokens with.
+      # krizaka-security validates every request locally with it and refuses to start when it is
+      # shorter than 32 characters (256 bits).
+      secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}

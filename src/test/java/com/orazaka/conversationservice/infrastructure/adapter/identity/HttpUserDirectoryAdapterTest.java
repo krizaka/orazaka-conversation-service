@@ -2,8 +2,8 @@ package com.orazaka.conversationservice.infrastructure.adapter.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.krizaka.security.jwt.SessionJwtProperties;
 import com.orazaka.conversationservice.infrastructure.config.IdentityDirectoryProperties;
-import com.orazaka.conversationservice.infrastructure.config.SessionJwtProperties;
 import com.orazaka.identity.domain.model.User;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;

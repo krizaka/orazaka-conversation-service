@@ -1,9 +1,9 @@
 package com.orazaka.conversationservice.infrastructure.adapter.identity;
 
+import com.krizaka.security.jwt.SessionJwtProperties;
+import com.krizaka.security.token.ServiceTokenProvider;
 import com.orazaka.conversationservice.application.service.UserDirectoryService;
 import com.orazaka.conversationservice.infrastructure.config.IdentityDirectoryProperties;
-import com.orazaka.conversationservice.infrastructure.config.SessionJwtProperties;
-import com.orazaka.conversationservice.infrastructure.support.ServiceTokenProvider;
 import com.orazaka.identity.domain.model.RateLimitInfo;
 import com.orazaka.identity.domain.model.User;
 import com.orazaka.identity.domain.model.UserProfile;

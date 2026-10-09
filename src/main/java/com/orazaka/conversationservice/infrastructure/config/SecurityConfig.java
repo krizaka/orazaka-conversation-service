@@ -1,5 +1,6 @@
 package com.orazaka.conversationservice.infrastructure.config;
 
+import com.krizaka.security.web.SecurityBaseline;
 import com.orazaka.conversationservice.application.service.UserDirectoryService;
 import com.orazaka.identity.domain.model.User;
 import jakarta.servlet.Filter;
@@ -7,7 +8,6 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.ProviderNotFoundException;
@@ -15,8 +15,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
@@ -29,11 +27,12 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Stateless Spring Security configuration for the {@code orazaka-router} module.
+ * Stateless Spring Security configuration for the conversation service.
  *
- * <p>Defines the security filter chain, CORS policy, and request authorization rules. All session
- * management is disabled ({@link SessionCreationPolicy#STATELESS}); every incoming request is
- * authenticated on-the-fly via official Spring Security OAuth2 resource server filters.
+ * <p>Defines the security filter chain, CORS policy, and request authorization rules. The chain
+ * starts from the Krizaka {@link SecurityBaseline} (stateless, preflight/health/info/error open,
+ * {@code SERVICE}-only {@code /internal/v1/**}) and adds this service's own rules; every incoming
+ * request is authenticated on-the-fly via official Spring Security OAuth2 resource server filters.
  */
 @Configuration
 @EnableWebSecurity
@@ -51,7 +50,7 @@ public class SecurityConfig {
 
   public SecurityConfig(
       UserDirectoryService userDirectoryService,
-      @Qualifier("identityJwtDecoder") JwtDecoder identityJwtDecoder,
+      @Qualifier("sessionJwtDecoder") JwtDecoder identityJwtDecoder,
       CorsProperties corsProperties,
       @Qualifier("operationGraphFilter") Filter operationGraphFilter,
       @Qualifier("rateLimitFilter") Optional<Filter> rateLimitFilter) {
@@ -108,17 +107,10 @@ public class SecurityConfig {
     // Justified: Stateless OAuth2 Resource Server — no cookies, no session state.
     // CSRF protection is not applicable for token-based (Bearer) authentication.
     // See AGENTS.md §7.1: "CSRF disabled for stateless API."
-    http.csrf(AbstractHttpConfigurer::disable)
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .sessionManagement(
-            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(
+    SecurityBaseline.apply(
+            http,
             auth ->
-                auth.requestMatchers(HttpMethod.OPTIONS, "/**")
-                    .permitAll()
-                    .requestMatchers("/actuator/health", "/actuator/info")
-                    .permitAll()
-                    .requestMatchers("/api/v1/status/health")
+                auth.requestMatchers("/api/v1/status/health")
                     .permitAll()
                     .requestMatchers("/api/v1/auth/login")
                     .permitAll()
@@ -136,16 +128,9 @@ public class SecurityConfig {
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/features")
                     .hasAnyAuthority(ADMIN, USER)
-                    // No /uploads/** rule: the static resource handler that served it is gone.
-                    // A URL-level authority check could only ever answer "is this caller a user",
-                    // never "does this caller own this file" — every tenant's tree was one path
-                    // segment away from any other. Assets are now a resource with an owner:
-                    // GET /api/v1/assets/{jobId}/{filename}, covered by the /api/v1/** rules below.
                     .requestMatchers("/api/v1/assets/**")
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/jobs/*/progress")
-                    .permitAll()
-                    .requestMatchers("/error")
                     .permitAll()
                     .requestMatchers("/api/v1/chat/stream/**")
                     .hasAnyAuthority(ADMIN, USER)
@@ -157,13 +142,9 @@ public class SecurityConfig {
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/models")
                     .hasAnyAuthority(ADMIN, USER)
-                    // Level 0: M2M JWT intent routing — claim validation via M2mJwtProperties.
-                    // Only the M2M /route is public; the authenticated dispatch (POST /intent) is
-                    // not.
                     .requestMatchers("/api/v1/intent/route")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated())
+                    .permitAll())
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2
