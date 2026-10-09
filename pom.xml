@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.orazaka</groupId>
+        <groupId>com.krizaka.orazaka</groupId>
         <artifactId>orazaka-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../../orazaka-libs/orazaka-build/orazaka-parent/pom.xml</relativePath>
@@ -30,13 +30,23 @@
 
 
     <dependencies>
+        <!-- Krizaka platform kit: session-JWT security baseline and service-to-service tokens. -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-security</artifactId>
+        </dependency>
+        <!-- The users service's internal API, typed (UserDirectoryClient). -->
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-users-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-assets</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
-            <artifactId>orazaka-billing-client</artifactId>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-billing-client</artifactId>
         </dependency>
 
         <dependency>
@@ -69,40 +79,40 @@
         </dependency>
         <!-- Internal Dependencies -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-core</artifactId>
         </dependency>
         <!-- Phase 2 cutover: the identity LIBRARY left this process - only the principal
              contract (User/UserProfile/RateLimitInfo + shared exceptions) remains; identity
              data is reached over the service's internal API (HttpUserDirectoryAdapter). -->
         <dependency>
-            <groupId>com.orazaka</groupId>
-            <artifactId>orazaka-identity-api</artifactId>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-users-api</artifactId>
         </dependency>
 
         <!-- Tier-1 job-plane contract: the JobCommand wire record this service publishes. One
              definition, shared with the executor that deserialises it (ADR-037, audit #17). -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-jobs-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-tools</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-business</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-persistence-app</artifactId>
         </dependency>
         <!-- Bridge: core DB-backed outbound ports (CapabilityProvider, PipelineConfigProvider, …)
              implemented against the persistence inbound ports. Shared with job-service so neither
              re-implements the same DB adapters. -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-persistence-bridge</artifactId>
         </dependency>
 
@@ -159,7 +169,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-test-support</artifactId>
         </dependency>
         <!-- Interceptor pipeline (single module — packages by concern: context, enrichment,
@@ -167,7 +177,7 @@
              @AutoConfiguration SPI from META-INF/spring imports; @ConditionalOnBean guards
              ensure graceful degradation when upstream ports (ChatModel, ToolRegistry...) absent. -->
         <dependency>
-            <groupId>com.orazaka</groupId>
+            <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-interceptors</artifactId>
         </dependency>
     </dependencies>
