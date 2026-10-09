@@ -137,7 +137,7 @@ class RateLimitFilterTest {
     // Given
     SecurityContextHolder.getContext().setAuthentication(null);
 
-    // Anonymous → default tier resolved from the DB (orazaka_rate_limits.is_default = 'free')
+    // Anonymous → default tier resolved from the DB (rate_limits.is_default = 'free')
     when(userDirectoryService.getDefaultTierKey()).thenReturn(Optional.of("free"));
     RateLimitInfo tierDto = new RateLimitInfo("free", 10, 1);
     when(userDirectoryService.getRateLimit("free")).thenReturn(Optional.of(tierDto));

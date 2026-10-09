@@ -89,7 +89,7 @@ class RateLimitFilter extends OncePerRequestFilter {
     String key =
         authenticatedUser.map(user -> user.id().toString()).orElseGet(request::getRemoteAddr);
 
-    // Default tier is data (orazaka_rate_limits.is_default), not yaml config.
+    // Default tier is data (rate_limits.is_default), not yaml config.
     String resolvedTier =
         authenticatedUser
             .map(User::rateLimitTier)

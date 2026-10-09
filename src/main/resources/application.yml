@@ -192,7 +192,7 @@ orazaka:
   # Session-JWT validation moved to krizaka.security.jwt (krizaka-security, below); all other
   # identity config moved to the identity service with the Phase 2 cutover.
   identity:
-    # Master on/off switch only — the default tier is data (orazaka_rate_limits.is_default).
+    # Master on/off switch only — the default tier is data (rate_limits.is_default).
     rate-limit:
       enabled: ${RATE_LIMIT_ENABLED:false}
 
@@ -202,6 +202,12 @@ orazaka:
 
 # ── Krizaka platform kit ──────────────────────────────────────────────────────
 krizaka:
+  messaging:
+    exchanges:
+      # Orazaka's bus: the Krizaka building blocks this service embeds (billing-client) publish and
+      # listen on it.
+      events: orazaka.events
+      dead-letter: orazaka.dlx
   billing:
     # Bootstrap switch only — the enforcement mode is a row owned by the billing
     # service. Default OFF wires the no-op adapter, so this service behaves
