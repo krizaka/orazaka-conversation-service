@@ -1,7 +1,7 @@
 package com.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.billing.domain.exception.InsufficientCreditsException;
 import com.krizaka.users.domain.exception.InvalidRequestException;
-import com.orazaka.billing.domain.exception.InsufficientCreditsException;
 import com.orazaka.core.application.pipeline.PipelineDisabledException;
 import com.orazaka.core.application.pipeline.PipelineShortCircuitException;
 import java.util.List;

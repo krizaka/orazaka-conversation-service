@@ -65,7 +65,7 @@ public class JobQueuePublisherService {
    * that was never authorised.
    *
    * @param message the job message to publish
-   * @throws com.orazaka.billing.domain.exception.InsufficientCreditsException when the actor cannot
+   * @throws com.krizaka.billing.domain.exception.InsufficientCreditsException when the actor cannot
    *     cover the estimate under active enforcement
    */
   public void publish(JobCommand message) {

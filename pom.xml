@@ -45,8 +45,8 @@
             <artifactId>orazaka-assets</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-billing-client</artifactId>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-billing-client</artifactId>
         </dependency>
 
         <dependency>

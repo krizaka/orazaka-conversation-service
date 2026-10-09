@@ -3,9 +3,9 @@ package com.orazaka.conversationservice.application.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.billing.domain.exception.InsufficientCreditsException;
+import com.krizaka.billing.domain.model.BillableCapability;
 import com.krizaka.users.domain.port.UserDirectoryClient;
-import com.orazaka.billing.domain.exception.InsufficientCreditsException;
-import com.orazaka.billing.domain.model.BillableCapability;
 import com.orazaka.jobs.domain.model.JobCommand;
 import com.orazaka.persistence.domain.model.OutboxMessage;
 import com.orazaka.persistence.domain.ports.inbound.OutboxStore;

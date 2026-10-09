@@ -6,14 +6,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.krizaka.billing.domain.model.CreditHoldCommand;
+import com.krizaka.billing.domain.model.CreditHoldResponse;
+import com.krizaka.billing.domain.model.EntitlementSnapshot;
+import com.krizaka.billing.domain.port.CreditAuthorizationClient;
+import com.krizaka.billing.domain.port.EntitlementProvider;
 import com.krizaka.users.domain.model.User;
 import com.krizaka.users.domain.model.UserProfile;
 import com.krizaka.users.domain.port.UserDirectoryClient;
-import com.orazaka.billing.domain.model.CreditHoldCommand;
-import com.orazaka.billing.domain.model.CreditHoldResponse;
-import com.orazaka.billing.domain.model.EntitlementSnapshot;
-import com.orazaka.billing.domain.port.CreditAuthorizationClient;
-import com.orazaka.billing.domain.port.EntitlementProvider;
 import com.orazaka.core.application.pipeline.DynamicPipelineExecutor;
 import com.orazaka.core.application.pipeline.PipelineRegistry;
 import com.orazaka.core.application.routing.SemanticRoutingEngine;
@@ -98,7 +98,7 @@ class UserPreferencesContractTest {
                 new EntitlementInterceptor(
                     entitlements,
                     credits,
-                    mock(com.orazaka.billing.domain.port.UnmeteredTurnRepository.class)))
+                    mock(com.krizaka.billing.domain.port.UnmeteredTurnRepository.class)))
             .process("bonjour", 0, context);
 
     ArgumentCaptor<CreditHoldCommand> hold = ArgumentCaptor.forClass(CreditHoldCommand.class);

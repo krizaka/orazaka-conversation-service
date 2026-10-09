@@ -86,7 +86,6 @@ spring:
     async:
       request-timeout: ${ASYNC_TIMEOUT_MS:600000}
 
-
   # Spring AI provider config intentionally ABSENT (ADR-029 + ADR-030).
   # All provider base-url / api-key / model wiring is loaded from the DB (`ai_providers` +
   # `orazaka_models`) and clients are built on demand by the Dynamic Model Router /
@@ -137,18 +136,6 @@ orazaka:
       master-key-file: ${ASSETS_MASTER_KEY_FILE:${user.home}/.orazaka/master.key}
       block-size: ${ASSETS_BLOCK_SIZE:65536}
       accept-plaintext: ${ASSETS_ACCEPT_PLAINTEXT:false}
-  billing:
-    # Bootstrap switch only — the enforcement mode is a row owned by the billing
-    # service. Default OFF wires the no-op adapter, so this service behaves
-    # exactly as before until billing is deliberately turned on.
-    enabled: ${BILLING_ENABLED:false}
-    base-url: ${BILLING_INTERNAL_URL:http://localhost:8095}
-    # Mints the SERVICE token /internal/v1/billing requires (ADR-035). It was absent from
-    # every consumer, so BILLING_ENABLED=true crashed each of them at startup with "the
-    # shared identity secret is required" — billing had never been switched on anywhere.
-    service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
-    connect-timeout: ${BILLING_CONNECT_TIMEOUT:500ms}
-    read-timeout: ${BILLING_READ_TIMEOUT:2s}
   # orazaka-router (ingress): upload storage + serving.
   router:
     # The synchronous endpoints THIS service serves, and the capability behind each (ADR-069 §5).
@@ -215,6 +202,18 @@ orazaka:
 
 # ── Krizaka platform kit ──────────────────────────────────────────────────────
 krizaka:
+  billing:
+    # Bootstrap switch only — the enforcement mode is a row owned by the billing
+    # service. Default OFF wires the no-op adapter, so this service behaves
+    # exactly as before until billing is deliberately turned on.
+    enabled: ${BILLING_ENABLED:false}
+    base-url: ${BILLING_INTERNAL_URL:http://localhost:8095}
+    # Mints the SERVICE token /internal/v1/billing requires (ADR-035). It was absent from
+    # every consumer, so BILLING_ENABLED=true crashed each of them at startup with "the
+    # shared identity secret is required" — billing had never been switched on anywhere.
+    service-secret: ${IDENTITY_JWT_SECRET:orazaka-local-dev-identity-jwt-secret-256bit!}
+    connect-timeout: ${BILLING_CONNECT_TIMEOUT:500ms}
+    read-timeout: ${BILLING_READ_TIMEOUT:2s}
   users:
     client:
       # The users service's internal API (krizaka-users-client): who the acting user is, their
