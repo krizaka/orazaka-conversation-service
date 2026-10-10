@@ -12,11 +12,12 @@ import com.krizaka.billing.domain.model.BillableCapability;
 import com.krizaka.billing.domain.model.UnmeteredTurn;
 import com.krizaka.orazaka.persistence.domain.model.OutboxMessage;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.OutboxStore;
+import com.krizaka.test.events.EventContractTest;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-class OutboxUnmeteredTurnRepositoryAdapterTest {
+class OutboxUnmeteredTurnRepositoryAdapterTest extends EventContractTest {
 
   private final OutboxStore outbox = mock(OutboxStore.class);
   private final UnmeteredTurn turn =
@@ -46,5 +47,14 @@ class OutboxUnmeteredTurnRepositoryAdapterTest {
     assertThrows(
         IllegalStateException.class,
         () -> new OutboxUnmeteredTurnRepositoryAdapter(outbox).record(turn));
+  }
+
+  @Test
+  void theAppendedPayloadConformsToBillingsSchema() {
+    new OutboxUnmeteredTurnRepositoryAdapter(outbox).record(turn);
+
+    ArgumentCaptor<OutboxMessage> appended = ArgumentCaptor.forClass(OutboxMessage.class);
+    verify(outbox).append(appended.capture());
+    assertConforms(UnmeteredTurn.ROUTING_KEY, 1, appended.getValue().payload());
   }
 }

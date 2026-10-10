@@ -1,0 +1,97 @@
+# ==============================================================================
+# orazaka-conversation-service — operating defaults
+# ------------------------------------------------------------------------------
+# The LOWEST-priority property source (ConversationServiceDefaults): application.yml,
+# the environment (.env) and the command line override every value here. What a deployment
+# decides lives in application.yml; this file holds how the service runs well, and the
+# Krizaka kit adds its own defaults beside it (krizaka-web: Problem Details, X-Request-Id,
+# Jackson; krizaka-observability: ECS console logs, health/info/prometheus, 10 % sampling).
+# Domain data (capabilities, interceptor toggles, model catalog, rate-limit tiers) lives in
+# the DB, never here. No key below is also a kit default.
+# ==============================================================================
+
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 60000
+      connection-timeout: 5000
+      leak-detection-threshold: 10000
+
+  rabbitmq:
+    # Propagate traceparent across the broker (producer + consumer observations).
+    template:
+      observation-enabled: true
+    listener:
+      simple:
+        observation-enabled: true
+        # Each consumer blocks for the full duration of its job, so a single consumer with the
+        # default (250) prefetch serializes every job behind the first long-running one (a 10-min
+        # video stalled a 1-min image for 6 min). prefetch=1 keeps a blocked consumer from hoarding
+        # the queue, and concurrency>=2 guarantees a free thread for a short job to run in
+        # parallel. Concurrency stays bounded on purpose: heavy media inference is memory-bound on
+        # a single machine, so prefetch is our backpressure.
+        concurrency: ${RABBITMQ_LISTENER_CONCURRENCY:2}
+        max-concurrency: ${RABBITMQ_LISTENER_MAX_CONCURRENCY:4}
+        prefetch: ${RABBITMQ_LISTENER_PREFETCH:1}
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        # Exponential backoff (AGENTS.md §6); exhausted retries dead-letter through the queue's own
+        # x-dead-letter-routing-key (orazaka.dlx, key = queue name). Spring Boot's retry, not
+        # krizaka-messaging's: the kit's recoverer routes to "<queue>.dlq", which the Orazaka
+        # topology does not bind yet — declaring a retry here makes the kit's factory back off.
+        retry:
+          enabled: true
+          max-attempts: ${RABBITMQ_RETRY_MAX_ATTEMPTS:2}
+          initial-interval: ${RABBITMQ_RETRY_INITIAL_INTERVAL:1s}
+          multiplier: 2.0
+          max-interval: 10s
+
+  servlet:
+    multipart:
+      # Buffer uploads in the JVM/Tomcat default temp dir. The application's served upload
+      # directory is the single typed source orazaka.router.uploads.directory.
+      max-file-size: 8MB
+      max-request-size: 8MB
+  mvc:
+    async:
+      # HTTP timeout of SSE and async endpoints (the job-level timeout is orazaka.jobs.*).
+      request-timeout: ${ASYNC_TIMEOUT_MS:600000}
+
+  # Spring AI provider config intentionally ABSENT (ADR-029 + ADR-030): provider base-url /
+  # api-key / model wiring is loaded from the DB (ai_providers + orazaka_models) by the Dynamic
+  # Model Router. Add/change providers in the DB (admin console), never in a file.
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  # Distributed tracing: OTLP/HTTP export to the local Jaeger container.
+  otlp:
+    tracing:
+      endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+
+orazaka:
+  # Asset encryption (ADR-054). The master key is NOT in .env: it is the one secret whose compromise
+  # is total. Declared here because AssetEncryptionProperties' own @DefaultValue
+  # ("${user.home}/...") is not placeholder-resolved by the binder.
+  assets:
+    encryption:
+      master-key-file: ${ASSETS_MASTER_KEY_FILE:${user.home}/.orazaka/master.key}
+  # Job-level timeout (the HTTP one is spring.mvc.async.request-timeout above) — shared with
+  # orazaka-job-service through the same variable.
+  jobs:
+    execution-timeout: ${JOBS_TIMEOUT_SECONDS:1800}
+  router:
+    # Where uploads are written and served from (AssetController resolves the owner first).
+    uploads:
+      directory: ${UPLOAD_DIR:var/orazaka-uploads}
+    # The synchronous endpoints THIS service serves, and the capability behind each (ADR-069 §5).
+    # OperationGraphFilter refuses a request here when that capability's engine is unavailable.
+    # Chat is genuinely synchronous and stays off the broker (AGENTS.md §6), so this gate is a
+    # live control and not a formality.
+    capability-endpoints:
+      paths:
+        "[/api/v1/chat]": orazaka.core.chat.completion

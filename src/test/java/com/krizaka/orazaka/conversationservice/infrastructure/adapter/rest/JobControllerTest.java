@@ -11,6 +11,7 @@ import com.krizaka.orazaka.core.domain.ports.inbound.ChatSessionService;
 import com.krizaka.orazaka.core.domain.ports.inbound.JobService;
 import com.krizaka.users.domain.exception.InvalidRequestException;
 import com.krizaka.users.domain.model.User;
+import com.krizaka.web.problem.NotFoundException;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import java.time.Instant;
@@ -144,9 +145,11 @@ class JobControllerTest {
   void testGetJobNotFound() {
     when(jobService.getJob("job-1")).thenReturn(Optional.empty());
 
-    ResponseEntity<JobInfo> response = jobController.getJob("job-1");
+    NotFoundException missing =
+        assertThrows(NotFoundException.class, () -> jobController.getJob("job-1"));
 
-    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    assertEquals(HttpStatus.NOT_FOUND, missing.status());
+    assertEquals(JobController.JOB_NOT_FOUND, missing.code());
   }
 
   @Test

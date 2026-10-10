@@ -7,6 +7,7 @@ import com.krizaka.orazaka.core.domain.ports.inbound.ChatSessionService;
 import com.krizaka.orazaka.core.domain.ports.inbound.JobService;
 import com.krizaka.users.domain.exception.InvalidRequestException;
 import com.krizaka.users.domain.model.User;
+import com.krizaka.web.problem.NotFoundException;
 import io.lettuce.core.api.StatefulRedisConnection;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RestController
 @RequestMapping("/api/v1/jobs")
 public class JobController {
+
+  /** The Problem Details code of an unknown job id. */
+  public static final String JOB_NOT_FOUND = "job-not-found";
 
   private static final Logger logger = LoggerFactory.getLogger(JobController.class);
 
@@ -115,7 +119,7 @@ public class JobController {
     return jobService
         .getJob(id)
         .map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.notFound().build());
+        .orElseThrow(() -> new NotFoundException(JOB_NOT_FOUND, "No job " + id + "."));
   }
 
   /** Registers a Server-Sent Events stream for real-time job status notifications. */
