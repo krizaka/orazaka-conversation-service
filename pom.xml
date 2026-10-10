@@ -30,10 +30,27 @@
 
 
     <dependencies>
-        <!-- Krizaka platform kit: session-JWT security baseline and service-to-service tokens. -->
+        <!-- The Krizaka starters (krizaka-bom, imported by orazaka-parent): one dependency per
+             capability, no version. web = krizaka-web (Problem Details, X-Request-Id, Jackson 3
+             defaults, declared CORS) + Spring MVC + validation + actuator; security =
+             krizaka-security (session JWT, service tokens) + Spring Security + resource server;
+             rabbitmq = krizaka-messaging (outbox, dedup, JSON) + AMQP + JDBC; observability =
+             common meter tags, ECS logs, OTLP tracing, Prometheus. -->
         <dependency>
             <groupId>com.krizaka</groupId>
-            <artifactId>krizaka-security</artifactId>
+            <artifactId>krizaka-spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-spring-boot-starter-rabbitmq</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-spring-boot-starter-observability</artifactId>
         </dependency>
         <!-- The users service's internal API, typed (UserDirectoryClient). -->
         <dependency>
@@ -49,10 +66,6 @@
             <artifactId>krizaka-billing-client</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
         <!-- Spring Boot 4 decoupled RestClient from spring-boot-starter-web: RestClientAutoConfiguration
              (the RestClient.Builder bean injected by core/tools — WhisperTranscriptionClient,
              OllamaModelCatalogProvider, VideoGeneratorClientImpl, DefaultMcpOrchestrator) now lives in
@@ -63,19 +76,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.data</groupId>
-            <artifactId>spring-data-commons</artifactId>
         </dependency>
         <!-- Internal Dependencies -->
         <dependency>
@@ -123,11 +124,6 @@
              orazaka-core. The `spring-ai-ollama` / `spring-ai-openai` model libraries
              (the builder classes) are pulled transitively via orazaka-core. -->
 
-        <!-- RabbitMQ AMQP -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-amqp</artifactId>
-        </dependency>
 
         <!-- Rate Limiting Dependencies -->
         <dependency>
@@ -140,22 +136,7 @@
             <artifactId>lettuce-core</artifactId>
         </dependency>
 
-        <!-- Actuator, AOP and Resilience4j -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-        <!-- Distributed tracing (Phase 0 observability baseline): Micrometer Tracing over the
-             OpenTelemetry bridge, exported OTLP/HTTP to the local Jaeger container (:4318).
-             AMQP template/listener observation propagates traceparent across the broker. -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-tracing-bridge-otel</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-exporter-otlp</artifactId>
-        </dependency>
+        <!-- AOP -->
         <!-- Spring Boot 4 removed spring-boot-starter-aop (GA); AspectJ weaver is BOM-managed
              and AopAutoConfiguration (core) enables @Aspect proxying when it is present. -->
         <dependency>
@@ -172,6 +153,13 @@
             <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-test-support</artifactId>
         </dependency>
+        <!-- EventContractTest: the evt.turn.unmetered this service publishes conforms to
+             krizaka-billing-api's schema. -->
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Interceptor pipeline (single module — packages by concern: context, enrichment,
              reformulation, tooling, translation, validation, governance). Registered via
              @AutoConfiguration SPI from META-INF/spring imports; @ConditionalOnBean guards
@@ -183,7 +171,35 @@
     </dependencies>
 
     <build>
+        <!-- "@project.version@" in application.yml (krizaka.observability.version), as
+             spring-boot-starter-parent does it; "${...}" placeholders are left to Spring. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>application.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>application.yml</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <configuration>
+                    <delimiters>
+                        <delimiter>@</delimiter>
+                    </delimiters>
+                    <useDefaultDelimiters>false</useDefaultDelimiters>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

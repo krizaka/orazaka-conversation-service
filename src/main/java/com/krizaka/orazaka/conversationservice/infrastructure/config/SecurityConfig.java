@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.ProviderNotFoundException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,17 +23,16 @@ import org.springframework.security.oauth2.server.resource.authentication.Bearer
 import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Stateless Spring Security configuration for the conversation service.
  *
- * <p>Defines the security filter chain, CORS policy, and request authorization rules. The chain
- * starts from the Krizaka {@link SecurityBaseline} (stateless, preflight/health/info/error open,
- * {@code SERVICE}-only {@code /internal/v1/**}) and adds this service's own rules; every incoming
- * request is authenticated on-the-fly via official Spring Security OAuth2 resource server filters.
+ * <p>Defines the security filter chain and request authorization rules. CORS is krizaka-web's:
+ * {@code krizaka.web.cors.allowed-origins} declares the origins, and its {@code
+ * corsConfigurationSource} is the one {@code cors()} picks up. The chain starts from the Krizaka
+ * {@link SecurityBaseline} (stateless, preflight/health/info/error open, {@code SERVICE}-only
+ * {@code /internal/v1/**}) and adds this service's own rules; every incoming request is
+ * authenticated on-the-fly via official Spring Security OAuth2 resource server filters.
  */
 @Configuration
 @EnableWebSecurity
@@ -44,19 +44,16 @@ public class SecurityConfig {
 
   private final UserDirectoryClient userDirectoryService;
   private final JwtDecoder identityJwtDecoder;
-  private final CorsProperties corsProperties;
   private final Filter operationGraphFilter;
   private final Optional<Filter> rateLimitFilter;
 
   public SecurityConfig(
       UserDirectoryClient userDirectoryService,
       @Qualifier("sessionJwtDecoder") JwtDecoder identityJwtDecoder,
-      CorsProperties corsProperties,
       @Qualifier("operationGraphFilter") Filter operationGraphFilter,
       @Qualifier("rateLimitFilter") Optional<Filter> rateLimitFilter) {
     this.userDirectoryService = userDirectoryService;
     this.identityJwtDecoder = identityJwtDecoder;
-    this.corsProperties = corsProperties;
     this.operationGraphFilter = operationGraphFilter;
     this.rateLimitFilter = rateLimitFilter;
   }
@@ -144,7 +141,7 @@ public class SecurityConfig {
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/intent/route")
                     .permitAll())
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .cors(Customizer.withDefaults())
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2
@@ -156,25 +153,5 @@ public class SecurityConfig {
         filter -> http.addFilterAfter(filter, BearerTokenAuthenticationFilter.class));
 
     return http.build();
-  }
-
-  @Bean
-  @SuppressWarnings(
-      "java:S5122") // Justified: CORS policy is dynamically configured via properties and allows
-  // wildcard path mapping for APIs.
-  public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration configuration = new CorsConfiguration();
-    if (corsProperties.allowedOrigins() == null || corsProperties.allowedOrigins().isEmpty()) {
-      throw new IllegalStateException(
-          "CORS allowed origins are unresolved. Configure orazaka.cors.allowed-origins.");
-    }
-    configuration.setAllowedOrigins(corsProperties.allowedOrigins());
-    configuration.setAllowedMethods(corsProperties.allowedMethods());
-    configuration.setAllowedHeaders(corsProperties.allowedHeaders());
-    configuration.setAllowCredentials(corsProperties.allowCredentials());
-
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", configuration);
-    return source;
   }
 }

@@ -4,32 +4,68 @@ import com.krizaka.billing.domain.exception.InsufficientCreditsException;
 import com.krizaka.orazaka.core.application.pipeline.PipelineDisabledException;
 import com.krizaka.orazaka.core.application.pipeline.PipelineShortCircuitException;
 import com.krizaka.users.domain.exception.InvalidRequestException;
+import com.krizaka.web.problem.ProblemDetailsAdvice;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * REST exception advice for the router's own endpoints. Identity-flow exceptions are handled by the
- * identity service's advice; the router only maps the request-validation failures its media and job
- * endpoints raise (via the identity-api contract exception).
+ * The conversation service's own refusals, on top of krizaka-web's Problem Details.
+ *
+ * <p>Every other failure is answered by krizaka-web's {@link ProblemDetailsAdvice} (RFC 9457 with
+ * {@code code} and {@code requestId}). Two kinds stay here:
+ *
+ * <ul>
+ *   <li>{@link InvalidRequestException} — raised by the users contract, which knows nothing of
+ *       krizaka-web — is translated into a {@code 400} {@code invalid-request} problem by the kit's
+ *       own advice, so it reads like every other error;
+ *   <li>the engine's refusals ({@code 402}, {@code 403}, {@code 503}) keep the structured refusal
+ *       body the paywall reads ({@code status}, {@code capability}, {@code required}, {@code
+ *       balance}, {@code remedies} — {@code RefusalSchema} in orazaka-shared). Its {@code status}
+ *       is a reason string, not RFC 9457's number: moving it to Problem Details is a client change
+ *       of its own (ADR-074).
+ * </ul>
+ *
+ * <p>Ordered first: the kit's advice also answers {@code Exception}, and two advices claiming the
+ * same exception are consulted by order.
  */
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(
     basePackages = "com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest")
 public class RestErrorResolver {
 
   private static final Logger logger = LoggerFactory.getLogger(RestErrorResolver.class);
-  private static final String ERROR_KEY = "error";
 
-  /** Maps an invalid request (unknown model, malformed payload semantics) to 400 Bad Request. */
+  private final ProblemDetailsAdvice problems;
+
+  /**
+   * Creates the advice.
+   *
+   * @param problems krizaka-web's advice, which formats the {@code invalid-request} problem
+   */
+  public RestErrorResolver(ProblemDetailsAdvice problems) {
+    this.problems = problems;
+  }
+
+  /**
+   * Maps an invalid request (unknown model, malformed payload semantics) to a {@code 400} Problem
+   * Details, code {@code invalid-request}.
+   *
+   * @param ex the users contract's exception
+   * @return the problem, with {@code code} and {@code requestId}
+   */
   @ExceptionHandler(InvalidRequestException.class)
-  public ResponseEntity<Map<String, String>> handleInvalidRequest(InvalidRequestException ex) {
+  public ProblemDetail handleInvalidRequest(InvalidRequestException ex) {
     logger.warn("REST {} intercepted: {}", ex.getClass().getSimpleName(), ex.getMessage());
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(ERROR_KEY, ex.getMessage()));
+    return problems.onDomain(new InvalidRequestProblem(ex.getMessage()));
   }
 
   /**

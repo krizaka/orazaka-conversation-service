@@ -7,7 +7,6 @@ import com.krizaka.users.domain.model.User;
 import com.krizaka.users.domain.port.UserDirectoryClient;
 import jakarta.servlet.Filter;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -23,12 +22,10 @@ import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
-import org.springframework.web.cors.CorsConfiguration;
 
 class SecurityConfigTest {
 
   private UserDirectoryClient userDirectoryService;
-  private CorsProperties corsProperties;
   private Filter operationGraphFilter;
   private Filter rateLimitFilter;
   private JwtDecoder identityJwtDecoder;
@@ -38,14 +35,12 @@ class SecurityConfigTest {
   void setUp() {
     userDirectoryService = mock(UserDirectoryClient.class);
     identityJwtDecoder = mock(JwtDecoder.class);
-    corsProperties = mock(CorsProperties.class);
     operationGraphFilter = mock(Filter.class);
     rateLimitFilter = mock(Filter.class);
     securityConfig =
         new SecurityConfig(
             userDirectoryService,
             identityJwtDecoder,
-            corsProperties,
             operationGraphFilter,
             Optional.of(rateLimitFilter));
   }
@@ -130,40 +125,5 @@ class SecurityConfigTest {
     Authentication authInput = mock(Authentication.class);
 
     assertThrows(ProviderNotFoundException.class, () -> manager.authenticate(authInput));
-  }
-
-  @Test
-  void testCorsConfigurationSourceNullOrigins() {
-    when(corsProperties.allowedOrigins()).thenReturn(null);
-
-    assertThrows(IllegalStateException.class, () -> securityConfig.corsConfigurationSource());
-  }
-
-  @Test
-  void testCorsConfigurationSourceEmptyOrigins() {
-    when(corsProperties.allowedOrigins()).thenReturn(List.of());
-
-    assertThrows(IllegalStateException.class, () -> securityConfig.corsConfigurationSource());
-  }
-
-  @Test
-  void testCorsConfigurationSourceValid() {
-    when(corsProperties.allowedOrigins()).thenReturn(List.of("http://localhost:3000"));
-    when(corsProperties.allowedMethods()).thenReturn(List.of("GET", "POST"));
-    when(corsProperties.allowedHeaders()).thenReturn(List.of("*"));
-    when(corsProperties.allowCredentials()).thenReturn(true);
-
-    var source = securityConfig.corsConfigurationSource();
-    assertNotNull(source);
-
-    // Test that resolving CORS configuration matches expectations
-    var request = new org.springframework.mock.web.MockHttpServletRequest();
-    request.setRequestURI("/api/v1/something");
-    CorsConfiguration config = source.getCorsConfiguration(request);
-    assertNotNull(config);
-    assertEquals(List.of("http://localhost:3000"), config.getAllowedOrigins());
-    assertEquals(List.of("GET", "POST"), config.getAllowedMethods());
-    assertEquals(List.of("*"), config.getAllowedHeaders());
-    assertTrue(config.getAllowCredentials());
   }
 }
