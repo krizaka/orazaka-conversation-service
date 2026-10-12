@@ -9,7 +9,7 @@
 # ==============================================================================
 
 # ── Build Stage ──────────────────────────────────────────────────────────────
-FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
+FROM maven:3.9-eclipse-temurin-26-alpine AS builder
 WORKDIR /app
 
 # Copy configuration and source files. The reactor aggregator (pom.xml) references
@@ -26,7 +26,7 @@ COPY orazaka-end2end orazaka-end2end
 RUN mvn clean package -pl orazaka-apps/services/orazaka-conversation-service -am -DskipTests
 
 # ── Runtime Stage ────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 # Create a non-privileged system group and user
