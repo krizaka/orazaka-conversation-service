@@ -3,8 +3,10 @@ package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 import com.krizaka.billing.domain.exception.InsufficientCreditsException;
 import com.krizaka.orazaka.core.application.pipeline.PipelineDisabledException;
 import com.krizaka.orazaka.core.application.pipeline.PipelineShortCircuitException;
+import com.krizaka.orazaka.studio.domain.exception.TurnConsentRequiredException;
 import com.krizaka.users.domain.exception.InvalidRequestException;
 import com.krizaka.web.problem.ProblemDetailsAdvice;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -130,6 +132,25 @@ public class RestErrorResolver {
                 "status", ex.reason(),
                 "message", ex.getMessage() == null ? ex.reason() : ex.getMessage(),
                 "remedies", List.of("upgrade_plan")));
+  }
+
+  /**
+   * Relays the studio service's {@code 451} for a turn under an installation whose consent is to an
+   * older statement (ADR-055 §3, ADR-076): the version and the statement, verbatim, so the client
+   * shows the pack's words and never its own.
+   *
+   * @param ex the refusal
+   * @return {@code 451} with the statement to agree to
+   */
+  @ExceptionHandler(TurnConsentRequiredException.class)
+  public ResponseEntity<Map<String, Object>> handleConsentRequired(
+      TurnConsentRequiredException ex) {
+    logger.info("Turn refused: consent required to version {}", ex.requiredVersion());
+    Map<String, Object> body = new HashMap<>();
+    body.put("status", "consent_required");
+    body.put("consentVersion", ex.requiredVersion());
+    body.put("statement", ex.statement());
+    return ResponseEntity.status(HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS).body(body);
   }
 
   private static Map<String, Object> refusalBody(InsufficientCreditsException ex) {

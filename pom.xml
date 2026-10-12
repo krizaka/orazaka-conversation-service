@@ -109,6 +109,13 @@
             <groupId>com.krizaka.orazaka</groupId>
             <artifactId>orazaka-persistence-app</artifactId>
         </dependency>
+        <!-- Tier-1 Studio contract and client: a voice turn under an installation reads its pack's
+             declarations from the studio service (ADR-076). Named here rather than reached through
+             orazaka-business, because this service calls it itself. -->
+        <dependency>
+            <groupId>com.krizaka.orazaka</groupId>
+            <artifactId>orazaka-studio-client</artifactId>
+        </dependency>
         <!-- Bridge: core DB-backed outbound ports (CapabilityProvider, PipelineConfigProvider, …)
              implemented against the persistence inbound ports. Shared with job-service so neither
              re-implements the same DB adapters. -->
