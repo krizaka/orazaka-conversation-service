@@ -95,3 +95,5 @@ orazaka:
     capability-endpoints:
       paths:
         "[/api/v1/chat]": orazaka.core.chat.completion
+        # A voice turn's answer is a chat completion (ADR-076): no engine, no turn.
+        "[/api/v1/voice/turns]": orazaka.core.chat.completion

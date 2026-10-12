@@ -41,4 +41,19 @@ class RestErrorResolverTest {
         .containsEntry("status", "engine_disabled")
         .doesNotContainKey("remedies");
   }
+
+  @Test
+  @DisplayName("[ADR-076] a turn under out-of-date consent is 451 with the statement, verbatim")
+  void consentRequiredIs451() {
+    var response =
+        resolver.handleConsentRequired(
+            new com.krizaka.orazaka.studio.domain.exception.TurnConsentRequiredException(
+                "1.1", "Ce Studio enregistre…"));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS);
+    assertThat(response.getBody())
+        .containsEntry("status", "consent_required")
+        .containsEntry("consentVersion", "1.1")
+        .containsEntry("statement", "Ce Studio enregistre…");
+  }
 }

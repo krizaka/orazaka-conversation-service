@@ -131,6 +131,12 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/api/v1/chat/stream/**")
                     .hasAnyAuthority(ADMIN, USER)
+                    // A spoken sentence is fetched by an <audio> element, which sends no bearer
+                    // token: its signed, five-minute URL is the authorisation (ADR-076).
+                    .requestMatchers("/api/v1/voice/clips/**")
+                    .permitAll()
+                    .requestMatchers("/api/v1/voice/turns")
+                    .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/credentials/**")
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/api-keys/**")

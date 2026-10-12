@@ -17,3 +17,4 @@ krizaka:
   billing: { enabled: "${BILLING_ENABLED:false}", base-url: "${BILLING_INTERNAL_URL:http://localhost:8095}", service-secret: "${IDENTITY_JWT_SECRET:}" }
 orazaka:
   core: { orchestration.enabled: "${ORCHESTRATION_ENABLED:true}", knowledge: { base-url: "${KNOWLEDGE_URL:http://localhost:8084}", service-secret: "${IDENTITY_JWT_SECRET:}" } }
+  studio: { enabled: "${STUDIO_CLIENT_ENABLED:true}", base-url: "${STUDIO_INTERNAL_URL:http://localhost:8096}", service-secret: "${IDENTITY_JWT_SECRET:}" }
