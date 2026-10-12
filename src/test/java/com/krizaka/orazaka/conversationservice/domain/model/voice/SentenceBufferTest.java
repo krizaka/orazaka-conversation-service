@@ -90,4 +90,29 @@ class SentenceBufferTest {
     assertThat(buffer.accept("")).isEmpty();
     assertThat(buffer.flush()).isEmpty();
   }
+
+  @Test
+  @DisplayName("Only the first piece may end at a breath, and only once it is long enough")
+  void firstBreath() {
+    SentenceBuffer buffer = new SentenceBuffer();
+
+    assertThat(
+            feed(
+                buffer,
+                "Je comprends que cette semaine au travail a été vraiment lourde pour toi, ",
+                "et que ce soir, avec les enfants, tu te sens à bout. ",
+                "Oui, d'accord, je vois, et ensuite, "))
+        .containsExactly(
+            "Je comprends que cette semaine au travail a été vraiment lourde pour toi,",
+            "et que ce soir, avec les enfants, tu te sens à bout.");
+    assertThat(buffer.flush()).contains("Oui, d'accord, je vois, et ensuite,");
+  }
+
+  @Test
+  @DisplayName("A short first clause keeps going to the sentence's end")
+  void shortFirstClause() {
+    SentenceBuffer buffer = new SentenceBuffer();
+
+    assertThat(feed(buffer, "Bonsoir, je t'écoute. ")).containsExactly("Bonsoir, je t'écoute.");
+  }
 }

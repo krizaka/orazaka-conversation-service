@@ -17,6 +17,12 @@ import java.util.Set;
  * a number ({@code 9.8}) and a sentence too short to stand alone, which is held and spoken with the
  * next one.
  *
+ * <p><b>The first breath.</b> Only the first piece of an answer may also end at a breath — a comma,
+ * a semicolon or a colon followed by a space — once it is {@link #FIRST_BREATH} characters long.
+ * The time a person waits is the time to the first audio, and a long first sentence is the largest
+ * part of it: measured on ten audio turns, cutting there brought the slowest first sentence from
+ * 2.5 s to under 2 s (ADR-076). After the first piece, cuts are on strong punctuation only.
+ *
  * <p>Not thread-safe: one buffer per turn, fed by the one thread that reads the model's stream.
  */
 public final class SentenceBuffer {
@@ -26,7 +32,11 @@ public final class SentenceBuffer {
    */
   static final int MINIMUM_LENGTH = 12;
 
+  /** How long the first piece must be before a breath may end it. */
+  static final int FIRST_BREATH = 48;
+
   private static final Set<Character> ENDS = Set.of('.', '!', '?', '…');
+  private static final Set<Character> BREATHS = Set.of(',', ';', ':');
   private static final Set<Character> CLOSERS = Set.of('»', '"', '\'', ')', '”', '’');
   private static final Set<String> ABBREVIATIONS =
       Set.of(
@@ -34,6 +44,7 @@ public final class SentenceBuffer {
           "e.g", "i.e", "p", "no");
 
   private final StringBuilder pending = new StringBuilder();
+  private boolean first = true;
 
   /**
    * Adds a delta and returns the sentences it completed, in order.
@@ -51,11 +62,15 @@ public final class SentenceBuffer {
     int i = 0;
     while (i < pending.length()) {
       int end = boundaryAt(i);
+      if (end < 0 && first) {
+        end = breathAt(i, start);
+      }
       if (end > 0) {
         String sentence = pending.substring(start, end).strip();
         if (sentence.length() >= MINIMUM_LENGTH) {
           sentences.add(sentence);
           start = end;
+          first = false;
         }
         i = end;
       } else {
@@ -76,6 +91,18 @@ public final class SentenceBuffer {
     String rest = pending.toString().strip();
     pending.setLength(0);
     return rest.isEmpty() ? Optional.empty() : Optional.of(rest);
+  }
+
+  /** The index just after a breath at {@code i} that may end the first piece, or {@code -1}. */
+  private int breathAt(int i, int start) {
+    if (!BREATHS.contains(pending.charAt(i))
+        || i + 1 >= pending.length()
+        || !Character.isWhitespace(pending.charAt(i + 1))
+        || pending.substring(start, i + 1).strip().length() < FIRST_BREATH
+        || (i > 0 && Character.isDigit(pending.charAt(i - 1)))) {
+      return -1;
+    }
+    return i + 1;
   }
 
   /**
