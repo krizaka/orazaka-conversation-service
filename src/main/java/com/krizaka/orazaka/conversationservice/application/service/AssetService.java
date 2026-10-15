@@ -1,13 +1,17 @@
 package com.krizaka.orazaka.conversationservice.application.service;
 
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
+import com.krizaka.orazaka.assets.domain.port.AssetKeys;
+import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
 import com.krizaka.orazaka.assets.infrastructure.config.AssetEncryptionProperties;
+import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.conversationservice.domain.model.asset.AssetRef;
 import com.krizaka.orazaka.conversationservice.infrastructure.config.RouterProperties;
 import com.krizaka.orazaka.conversationservice.infrastructure.support.EncryptedFileResource;
 import com.krizaka.orazaka.conversationservice.infrastructure.support.PathResolver;
 import com.krizaka.orazaka.persistence.domain.model.JobDto;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -34,12 +38,16 @@ public class AssetService {
   private final RouterProperties routerProperties;
   private final EncryptedAssetService encryptedAssetService;
   private final AssetEncryptionProperties encryptionProperties;
+  private final DurableAssetStore durableAssetStore;
+  private final MediaStorageProperties storage;
 
   public AssetService(
       JobPersistenceProvider jobPersistenceProvider,
       RouterProperties routerProperties,
       EncryptedAssetService encryptedAssetService,
-      AssetEncryptionProperties encryptionProperties) {
+      AssetEncryptionProperties encryptionProperties,
+      DurableAssetStore durableAssetStore,
+      MediaStorageProperties storage) {
     this.jobPersistenceProvider =
         Objects.requireNonNull(jobPersistenceProvider, "JobPersistenceProvider required");
     this.routerProperties = Objects.requireNonNull(routerProperties, "RouterProperties required");
@@ -47,6 +55,9 @@ public class AssetService {
         Objects.requireNonNull(encryptedAssetService, "EncryptedAssetService required");
     this.encryptionProperties =
         Objects.requireNonNull(encryptionProperties, "AssetEncryptionProperties required");
+    this.durableAssetStore =
+        Objects.requireNonNull(durableAssetStore, "DurableAssetStore required");
+    this.storage = Objects.requireNonNull(storage, "MediaStorageProperties required");
   }
 
   /**
@@ -89,10 +100,40 @@ public class AssetService {
       return Optional.empty();
     }
 
-    if (!Files.isReadable(file) || Files.isDirectory(file)) {
+    if (!Files.isReadable(file) && !restoreFromDurableStore(owner, jobId, filename, file)) {
+      return Optional.empty();
+    }
+    if (Files.isDirectory(file)) {
       return Optional.empty();
     }
     return readable(file);
+  }
+
+  /**
+   * Brings a file the container's disk no longer has back from the durable store.
+   *
+   * <p>Only reached after the ownership decision above, with the owner read from the job record —
+   * the durable key is built from it, never from the URL. What comes back is the sealed envelope,
+   * so the file then goes through exactly the same read path (and {@code Range} handling) as one
+   * that never left the disk.
+   */
+  private boolean restoreFromDurableStore(String owner, String jobId, String filename, Path file) {
+    if (!durableAssetStore.enabled()) {
+      return false;
+    }
+    try {
+      boolean restored =
+          durableAssetStore.fetch(
+              AssetKeys.jobFile(storage.tenant(), owner, jobId, filename), file);
+      if (restored) {
+        logger.info("Restored asset {}/{} from the durable store", jobId, filename);
+      }
+      return restored;
+    } catch (IOException | IllegalArgumentException ex) {
+      logger.warn(
+          "Durable store could not serve asset {}/{}: {}", jobId, filename, ex.getMessage());
+      return false;
+    }
   }
 
   /**

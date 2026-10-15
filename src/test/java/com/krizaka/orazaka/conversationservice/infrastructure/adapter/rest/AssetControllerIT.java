@@ -83,7 +83,15 @@ class AssetControllerIT {
 
     mockMvc =
         MockMvcBuilders.standaloneSetup(
-                new AssetController(new AssetService(jobs, properties, assets, encryption)))
+                new AssetController(
+                    new AssetService(
+                        jobs,
+                        properties,
+                        assets,
+                        encryption,
+                        new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+                        new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                            "local", null, null, "storage.bunnycdn.com", null, "default"))))
             .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .build();
   }
@@ -331,6 +339,60 @@ class AssetControllerIT {
   }
 
   @Test
+  @DisplayName(
+      "[durable] a file the container lost is restored from the durable store — for its owner only")
+  void aLostFileIsRestoredFromTheDurableStore() throws Exception {
+    byte[] pixels = new byte[3 * BLOCK_SIZE + 5];
+    new java.util.Random(11).nextBytes(pixels);
+    Path sealed = uploadRoot.resolve("sealed.tmp");
+    assets.write(sealed, pixels);
+    com.krizaka.orazaka.assets.infrastructure.storage.DirectoryAssetStore durable =
+        new com.krizaka.orazaka.assets.infrastructure.storage.DirectoryAssetStore(
+            uploadRoot.resolve("durable"));
+    durable.put("t/acme/u/" + OWNER + "/jobs/" + JOB + "/gone.png", sealed);
+    Path local = uploadRoot.resolve(OWNER).resolve(JOB).resolve("output").resolve("gone.png");
+    assertFalse(Files.exists(local), "the container disk no longer has it");
+
+    MockMvc durableMvc =
+        MockMvcBuilders.standaloneSetup(
+                new AssetController(
+                    new AssetService(
+                        new StubJobs(),
+                        routerProperties(uploadRoot.toString()),
+                        assets,
+                        encryption,
+                        durable,
+                        new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                            "directory", null, null, "e", "x", "acme"))))
+            .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+            .build();
+
+    authenticate(OTHER, "ROLE_USER");
+    durableMvc
+        .perform(get("/api/v1/assets/{job}/{file}", JOB, "gone.png"))
+        .andExpect(status().isNotFound());
+    assertFalse(Files.exists(local), "a stranger's request restores nothing");
+
+    authenticate(OWNER, "ROLE_USER");
+    byte[] served =
+        durableMvc
+            .perform(get("/api/v1/assets/{job}/{file}", JOB, "gone.png"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsByteArray();
+    assertArrayEquals(pixels, served);
+    org.junit.jupiter.api.Assertions.assertTrue(Files.exists(local), "restored onto the disk");
+
+    durableMvc
+        .perform(get("/api/v1/assets/{job}/{file}", JOB, "gone.png").header("Range", "bytes=10-19"))
+        .andExpect(status().isPartialContent());
+    durableMvc
+        .perform(get("/api/v1/assets/{job}/{file}", JOB, "never-existed.png"))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
   @DisplayName("[ADR-054] and IS served while it is on — the cutover has to be crossable")
   void plaintextIsServedDuringTheMigration() throws Exception {
     Path legacy = uploadRoot.resolve(OWNER).resolve(JOB).resolve("output").resolve("legacy2.png");
@@ -345,7 +407,10 @@ class AssetControllerIT {
                         routerProperties(uploadRoot.toString()),
                         assets,
                         new AssetEncryptionProperties(
-                            true, encryption.masterKeyFile(), BLOCK_SIZE, true))))
+                            true, encryption.masterKeyFile(), BLOCK_SIZE, true),
+                        new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+                        new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                            "local", null, null, "storage.bunnycdn.com", null, "default"))))
             .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .build();
 
