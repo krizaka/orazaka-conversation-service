@@ -37,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Flux;
 
 /**
@@ -139,8 +141,23 @@ public class ChatController {
     SseEmitter emitter = sseStreamGateway.createEmitter();
     // Track this emitter so per-interceptor pipeline events can be relayed to it live.
     chatStreamRegistry.register(conversationId, emitter);
-    emitter.onCompletion(() -> chatStreamRegistry.unregister(conversationId));
-    emitter.onTimeout(() -> chatStreamRegistry.unregister(conversationId));
+    // The upstream generation must stop when the client goes away: keep the subscription and
+    // dispose it on completion, timeout, error or a failed send (orazaka-conversation-service#14).
+    // A Swap tolerates the dispose arriving before the subscription is assigned (synchronous
+    // sources emit inside subscribe()).
+    Disposable.Swap upstream = Disposables.swap();
+    Runnable cleanup =
+        () -> {
+          upstream.dispose();
+          chatStreamRegistry.unregister(conversationId, emitter);
+        };
+    emitter.onCompletion(cleanup);
+    emitter.onTimeout(cleanup);
+    emitter.onError(
+        error -> {
+          logger.debug("SSE transport error [{}]: {}", conversationId, error.toString());
+          cleanup.run();
+        });
 
     try {
       // ── Early-Ack: push pipeline architecture metadata before LLM inference ──
@@ -150,39 +167,44 @@ public class ChatController {
           aiClient.stream(request).timeout(Duration.ofSeconds(jobTimeoutSeconds));
 
       logger.debug("Subscribing to flux stream for conversation {}", conversationId);
-      stream.subscribe(
-          response -> {
-            String content = response.content();
-            if (content != null && !content.isEmpty()) {
-              try {
-                emitter.send(
-                    SseEmitter.event()
-                        .id(conversationId)
-                        .name("message")
-                        .data(Map.of("content", content), MediaType.APPLICATION_JSON));
-              } catch (IOException ioException) {
-                logger.debug("Client disconnected from SSE stream [{}] mid-stream", conversationId);
-              }
-            }
-          },
-          error -> {
-            logger.error("Failed to initialize SSE stream [{}]", conversationId, error);
-            chatStreamRegistry.unregister(conversationId);
-            try {
-              emitter.completeWithError(error);
-            } catch (Exception ignored) {
-              logger.trace("Emitter already closed during error completion [{}]", conversationId);
-            }
-          },
-          () -> {
-            logger.debug("SSE stream completed [{}]", conversationId);
-            chatStreamRegistry.unregister(conversationId);
-            try {
-              emitter.complete();
-            } catch (Exception ignored) {
-              logger.trace("Emitter already closed during normal completion [{}]", conversationId);
-            }
-          });
+      upstream.update(
+          stream.subscribe(
+              response -> {
+                String content = response.content();
+                if (content != null && !content.isEmpty()) {
+                  try {
+                    emitter.send(
+                        SseEmitter.event()
+                            .id(conversationId)
+                            .name("message")
+                            .data(Map.of("content", content), MediaType.APPLICATION_JSON));
+                  } catch (IOException | IllegalStateException sendFailure) {
+                    logger.debug(
+                        "Client disconnected from SSE stream [{}] mid-stream", conversationId);
+                    cleanup.run();
+                  }
+                }
+              },
+              error -> {
+                logger.error("Failed to initialize SSE stream [{}]", conversationId, error);
+                chatStreamRegistry.unregister(conversationId, emitter);
+                try {
+                  emitter.completeWithError(error);
+                } catch (Exception ignored) {
+                  logger.trace(
+                      "Emitter already closed during error completion [{}]", conversationId);
+                }
+              },
+              () -> {
+                logger.debug("SSE stream completed [{}]", conversationId);
+                chatStreamRegistry.unregister(conversationId, emitter);
+                try {
+                  emitter.complete();
+                } catch (Exception ignored) {
+                  logger.trace(
+                      "Emitter already closed during normal completion [{}]", conversationId);
+                }
+              }));
     } catch (Exception e) {
       logger.error(
           "Exception thrown during streamSse setup for conversation {}", conversationId, e);
