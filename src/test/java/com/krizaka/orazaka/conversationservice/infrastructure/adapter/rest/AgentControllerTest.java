@@ -28,10 +28,18 @@ class AgentControllerTest {
   @Test
   @SuppressWarnings("unchecked")
   void testAgentStreamAndCleanupOnTimeout() throws Exception {
-    String userId = "user-123";
+    com.krizaka.users.domain.model.User user =
+        new com.krizaka.users.domain.model.User(
+            java.util.UUID.fromString("00000000-0000-0000-0000-000000000123"),
+            "u",
+            "u@test.class",
+            true,
+            java.util.Set.of("ROLE_USER"),
+            Map.of());
+    String userId = user.id().toString();
 
     // Establishing stream
-    SseEmitter emitter = controller.agentStream(userId);
+    SseEmitter emitter = controller.agentStream(user);
     assertNotNull(emitter);
 
     // Verify online heartbeat sent
@@ -42,7 +50,7 @@ class AgentControllerTest {
             eq(MessagingContract.EVT_AGENT_PRESENCE),
             mapCaptor.capture());
     Map<String, Object> heartbeat = mapCaptor.getValue();
-    assertEquals("user-123", heartbeat.get("userId"));
+    assertEquals("00000000-0000-0000-0000-000000000123", heartbeat.get("userId"));
     assertEquals("ONLINE", heartbeat.get("status"));
     assertNotNull(heartbeat.get("timestamp"));
 
@@ -55,23 +63,39 @@ class AgentControllerTest {
 
   @Test
   void testReceiveReport() {
-    String userId = "user-123";
+    com.krizaka.users.domain.model.User user =
+        new com.krizaka.users.domain.model.User(
+            java.util.UUID.fromString("00000000-0000-0000-0000-000000000123"),
+            "u",
+            "u@test.class",
+            true,
+            java.util.Set.of("ROLE_USER"),
+            Map.of());
+    String userId = user.id().toString();
     Map<String, Object> report = Map.of("exitCode", 0, "logs", "Success");
 
-    Map<String, Object> response = controller.receiveReport(userId, report);
+    Map<String, Object> response = controller.receiveReport(user, report);
 
     assertEquals("RECEIVED", response.get("status"));
     verify(rabbitTemplate)
         .convertAndSend(
             MessagingContract.EVENTS_EXCHANGE,
-            MessagingContract.EVT_AGENT_RESULT_PREFIX + "user-123",
+            MessagingContract.EVT_AGENT_RESULT_PREFIX + "00000000-0000-0000-0000-000000000123",
             report);
   }
 
   @Test
   @SuppressWarnings("unchecked")
   void testDispatchToAgentFailure() throws Exception {
-    String userId = "user-123";
+    com.krizaka.users.domain.model.User user =
+        new com.krizaka.users.domain.model.User(
+            java.util.UUID.fromString("00000000-0000-0000-0000-000000000123"),
+            "u",
+            "u@test.class",
+            true,
+            java.util.Set.of("ROLE_USER"),
+            Map.of());
+    String userId = user.id().toString();
     SseEmitter mockEmitter = mock(SseEmitter.class);
 
     // Inject mock emitter via reflection into activeAgents

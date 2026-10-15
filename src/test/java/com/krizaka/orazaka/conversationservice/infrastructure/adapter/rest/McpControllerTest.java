@@ -233,8 +233,27 @@ class McpControllerTest {
 
     ResponseEntity<Object> response = mcpController.deleteUserServer(1, user);
 
-    assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-    assertEquals("Access Denied", response.getBody());
+    // 404, not 403: a foreign id must look exactly like a missing one (#17)
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    verify(userMcpServerPersistenceProvider, never()).deleteById(any());
+  }
+
+  @Test
+  void savingOverAnotherUsersServerIdIsNotFoundAndOverwritesNothing() {
+    UUID userId = UUID.randomUUID();
+    User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
+    UserMcpServerDto foreign =
+        new UserMcpServerDto(
+            7, "someone-else", "S", "http://s", "tok", true, Instant.now(FIXED_CLOCK));
+    when(userMcpServerPersistenceProvider.findById(7)).thenReturn(Optional.of(foreign));
+    UserMcpServerDto hijack =
+        new UserMcpServerDto(
+            7, userId.toString(), "S", "http://evil", "tok", true, Instant.now(FIXED_CLOCK));
+
+    ResponseEntity<Object> response = mcpController.saveUserServer(hijack, user);
+
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    verify(userMcpServerPersistenceProvider, never()).save(any());
   }
 
   @Test

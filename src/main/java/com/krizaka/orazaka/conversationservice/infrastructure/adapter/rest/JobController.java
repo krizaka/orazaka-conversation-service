@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -114,11 +113,23 @@ public class JobController {
 
   /** Fetches the single, atomic state of a specific job. */
   @GetMapping("/{id}")
-  public ResponseEntity<@NotNull JobInfo> getJob(@PathVariable String id) {
+  public ResponseEntity<@NotNull JobInfo> getJob(
+      @PathVariable String id, @AuthenticationPrincipal User user) {
     logger.debug("Resolving status for job ID: {}", id);
+    return ResponseEntity.ok(readableJob(id, user));
+  }
+
+  /**
+   * The job when the caller owns it or is an admin; a missing job and another user's job are the
+   * same 404, so existence never leaks (orazaka-conversation-service#17).
+   */
+  private JobInfo readableJob(String id, User user) {
     return jobService
         .getJob(id)
-        .map(ResponseEntity::ok)
+        .filter(
+            job ->
+                user.authorities().contains("ROLE_ADMIN")
+                    || user.id().toString().equals(job.userId()))
         .orElseThrow(() -> new NotFoundException(JOB_NOT_FOUND, "No job " + id + "."));
   }
 
@@ -142,11 +153,12 @@ public class JobController {
   /** Updates progress of a running job and broadcasts it to connected users. */
   @PostMapping("/{id}/progress")
   public ResponseEntity<Void> updateJobProgress(
-      @PathVariable String id, @RequestBody JobProgressRequest request) {
+      @PathVariable String id,
+      @RequestBody JobProgressRequest request,
+      @AuthenticationPrincipal User user) {
     logger.debug("Received progress update for job ID: {}, progress: {}%", id, request.progress());
-    jobService
-        .getJob(id)
-        .ifPresent(job -> jobStreamService.broadcastProgress(id, job.userId(), request.progress()));
+    JobInfo job = readableJob(id, user);
+    jobStreamService.broadcastProgress(id, job.userId(), request.progress());
     return ResponseEntity.ok().build();
   }
 
@@ -155,11 +167,13 @@ public class JobController {
   /** Approves a pending automation job and dispatches its payload to the execution queue. */
   @PostMapping("/{jobId}/approve")
   public ResponseEntity<Map<String, Object>> approveJob(
-      @PathVariable String jobId, @RequestHeader("X-User-Id") String userId) {
+      @PathVariable String jobId, @AuthenticationPrincipal User user) {
     if (logger.isInfoEnabled()) {
       logger.info("Approving automation job with id: {}", sanitize(jobId));
     }
-    jobQueuePublisher.publishApproval(jobId, userId);
+    // The approver is the authenticated caller and must own the job — never a client header.
+    readableJob(jobId, user);
+    jobQueuePublisher.publishApproval(jobId, user.id().toString());
     return ResponseEntity.ok(
         Map.of(
             "jobId", jobId,
@@ -170,10 +184,11 @@ public class JobController {
   /** Revokes a pending automation job, preventing its execution. */
   @PostMapping("/{jobId}/revoke")
   public ResponseEntity<Map<String, Object>> revokeJob(
-      @PathVariable String jobId, @RequestHeader("X-User-Id") String userId) {
+      @PathVariable String jobId, @AuthenticationPrincipal User user) {
     if (logger.isInfoEnabled()) {
       logger.info("Revoking automation job with id: {}", sanitize(jobId));
     }
+    readableJob(jobId, user);
     return ResponseEntity.ok(
         Map.of(
             "jobId", jobId,
