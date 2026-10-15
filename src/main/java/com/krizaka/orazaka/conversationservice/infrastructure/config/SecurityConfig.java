@@ -145,6 +145,8 @@ public class SecurityConfig {
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/models")
                     .hasAnyAuthority(ADMIN, USER)
+                    .requestMatchers("/api/v1/embeddings")
+                    .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/intent/route")
                     .permitAll())
         .cors(Customizer.withDefaults())
