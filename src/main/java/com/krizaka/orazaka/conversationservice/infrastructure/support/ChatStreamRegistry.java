@@ -39,6 +39,14 @@ public class ChatStreamRegistry {
   }
 
   /**
+   * Removes the emitter only if it is still the one registered: a second stream opened on the same
+   * conversation must not be unregistered by the first one finishing.
+   */
+  public void unregister(String conversationId, SseEmitter emitter) {
+    emitters.remove(conversationId, emitter);
+  }
+
+  /**
    * Relays a completed interceptor stage to the conversation's live SSE stream. No-op if no stream
    * is registered (e.g. the synchronous non-streaming chat path).
    *
