@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import com.krizaka.orazaka.persistence.infrastructure.config.MessagingContract;
+import com.krizaka.users.domain.model.User;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
@@ -9,10 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -50,7 +51,11 @@ class AgentController {
    * @return An SSE emitter that proxies automation payloads to the CLI.
    */
   @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-  SseEmitter agentStream(@RequestHeader("X-User-Id") String userId) {
+  SseEmitter agentStream(@AuthenticationPrincipal User user) {
+    // The identity is the authenticated caller's, never the CLI's X-User-Id header: that header is
+    // client-supplied and let any user register as, and receive the payloads of, another
+    // (orazaka-conversation-service#17).
+    String userId = user.id().toString();
     logger.info("CLI agent connecting.");
 
     SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
@@ -92,7 +97,8 @@ class AgentController {
    */
   @PostMapping("/report")
   Map<String, Object> receiveReport(
-      @RequestHeader("X-User-Id") String userId, @RequestBody Map<String, Object> report) {
+      @AuthenticationPrincipal User user, @RequestBody Map<String, Object> report) {
+    String userId = user.id().toString();
     logger.info("Received agent execution report.");
 
     // Forward report to the automation worker via RabbitMQ (evt.agent.result.{userId})

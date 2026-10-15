@@ -108,6 +108,13 @@ public class McpController {
     if (payload.url() == null || payload.url().isBlank()) {
       return ResponseEntity.badRequest().body("URL cannot be empty");
     }
+    // An id already held by another user is not ours to overwrite (an upsert is a takeover).
+    if (payload.id() != null) {
+      var existing = userMcpServerPersistenceProvider.findById(payload.id());
+      if (existing.isPresent() && !user.id().toString().equals(existing.get().userId())) {
+        return ResponseEntity.notFound().build();
+      }
+    }
     UserMcpServerDto saved = userMcpServerPersistenceProvider.save(payload);
     return ResponseEntity.ok(saved);
   }
@@ -123,7 +130,8 @@ public class McpController {
       return ResponseEntity.notFound().build();
     }
     if (!user.id().toString().equals(existingOpt.get().userId())) {
-      return ResponseEntity.status(403).body("Access Denied");
+      // 404, not 403: a foreign id looks exactly like a missing one (#17).
+      return ResponseEntity.notFound().build();
     }
     userMcpServerPersistenceProvider.deleteById(id);
     return ResponseEntity.ok().build();

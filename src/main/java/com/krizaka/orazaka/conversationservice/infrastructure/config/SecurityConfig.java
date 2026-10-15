@@ -127,8 +127,6 @@ public class SecurityConfig {
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/assets/**")
                     .hasAnyAuthority(ADMIN, USER)
-                    .requestMatchers("/api/v1/jobs/*/progress")
-                    .permitAll()
                     .requestMatchers("/api/v1/chat/stream/**")
                     .hasAnyAuthority(ADMIN, USER)
                     // A spoken sentence is fetched by an <audio> element, which sends no bearer

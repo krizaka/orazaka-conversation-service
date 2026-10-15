@@ -39,6 +39,7 @@ class ChatControllerTest {
   private DynamicPipelineExecutor pipelineExecutor;
   private SseStreamGateway sseStreamGateway;
   private ChatSessionService chatSessionService;
+  private com.krizaka.orazaka.core.domain.ports.outbound.ChatMemoryStore chatMemoryStore;
   private ChatController controller;
   private SseEmitter mockEmitter;
 
@@ -49,6 +50,7 @@ class ChatControllerTest {
     pipelineExecutor = mock(DynamicPipelineExecutor.class);
     sseStreamGateway = mock(SseStreamGateway.class);
     chatSessionService = mock(ChatSessionService.class);
+    chatMemoryStore = mock(com.krizaka.orazaka.core.domain.ports.outbound.ChatMemoryStore.class);
 
     when(pipelineExecutor.buildSchema(any(), any()))
         .thenReturn(new AdvancedPipelineSchema("default", List.of(), List.of(), 0L));
@@ -66,6 +68,7 @@ class ChatControllerTest {
             new ChatStreamRegistry(),
             sseStreamGateway,
             chatSessionService,
+            chatMemoryStore,
             new JobsProperties(30));
   }
 
@@ -119,6 +122,142 @@ class ChatControllerTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).isEmpty();
     verify(chatSessionService).getSessionsByUserId(mockUser.id().toString());
+  }
+
+  // ── orazaka-conversation-service#17: a session is its owner's — BOLA/IDOR ──
+
+  private static User userNamed(String name) {
+    return new User(
+        java.util.UUID.randomUUID(),
+        name,
+        name + "@test.class",
+        true,
+        Set.of("ROLE_USER"),
+        Map.of());
+  }
+
+  private com.krizaka.orazaka.core.domain.model.chat.ChatSessionInfo sessionOf(User owner) {
+    var session =
+        new com.krizaka.orazaka.core.domain.model.chat.ChatSessionInfo(
+            "sess-a", owner.id().toString(), "Private", java.time.Instant.EPOCH);
+    when(chatSessionService.getSession("sess-a")).thenReturn(java.util.Optional.of(session));
+    return session;
+  }
+
+  @Test
+  void renamingAnotherUsersSessionIsNotFoundAndChangesNothing() {
+    var alice = userNamed("alice");
+    var bob = userNamed("bob");
+    sessionOf(alice);
+
+    var response = controller.renameSession("sess-a", Map.of("title", "pwned"), bob);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    verify(chatSessionService, org.mockito.Mockito.never()).save(any());
+  }
+
+  @Test
+  void renamingOwnSessionWorks() {
+    var alice = userNamed("alice");
+    sessionOf(alice);
+    when(chatSessionService.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    var response = controller.renameSession("sess-a", Map.of("title", "Mine"), alice);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody().title()).isEqualTo("Mine");
+  }
+
+  @Test
+  void deletingAnotherUsersSessionIsNotFoundAndDeletesNothing() {
+    var alice = userNamed("alice");
+    var bob = userNamed("bob");
+    sessionOf(alice);
+
+    var response = controller.deleteSession("sess-a", bob);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    verify(chatSessionService, org.mockito.Mockito.never()).deleteSession(anyString());
+    verify(chatMemoryStore, org.mockito.Mockito.never()).clear(anyString());
+  }
+
+  @Test
+  void deletingAMissingSessionLooksTheSameAsAForeignOne() {
+    var response = controller.deleteSession("nope", userNamed("bob"));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void deletingOwnSessionClearsItsMessagesToo() {
+    var alice = userNamed("alice");
+    sessionOf(alice);
+
+    var response = controller.deleteSession("sess-a", alice);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+    verify(chatSessionService).deleteSession("sess-a");
+    verify(chatMemoryStore).clear("sess-a");
+  }
+
+  @Test
+  void creatingASessionOverAnotherUsersIdIsNotFoundAndKeepsTheOriginal() {
+    var alice = userNamed("alice");
+    var bob = userNamed("bob");
+    sessionOf(alice);
+
+    var response = controller.createSession(Map.of("conversationId", "sess-a"), bob);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    verify(chatSessionService, org.mockito.Mockito.never()).save(any());
+  }
+
+  @Test
+  void listingSessionsOnlyAsksForTheCallersOwn() {
+    var bob = userNamed("bob");
+    when(chatSessionService.getSessionsByUserId(anyString())).thenReturn(List.of());
+
+    controller.getSessions(bob);
+
+    verify(chatSessionService).getSessionsByUserId(bob.id().toString());
+    verify(chatSessionService, org.mockito.Mockito.never())
+        .getSessionsByUserId(
+            org.mockito.ArgumentMatchers.argThat(id -> !id.equals(bob.id().toString())));
+  }
+
+  @Test
+  void streamingIntoAnotherUsersConversationIsRefusedBeforeAnyHistoryIsRead() {
+    var alice = userNamed("alice");
+    var bob = userNamed("bob");
+    sessionOf(alice);
+
+    org.junit.jupiter.api.Assertions.assertThrows(
+        com.krizaka.web.problem.NotFoundException.class,
+        () -> controller.streamChat("sess-a", "hi", bob));
+    org.junit.jupiter.api.Assertions.assertThrows(
+        com.krizaka.web.problem.NotFoundException.class,
+        () ->
+            controller.streamChatPost(
+                "sess-a",
+                new ChatStreamRequest("hi", List.of(), null, null, null, null, "default"),
+                bob));
+    verify(aiClient, org.mockito.Mockito.never()).stream(any(ChatRequest.class));
+    verify(contextService, org.mockito.Mockito.never()).resolve(any(), any());
+  }
+
+  @Test
+  void streamingIntoAnUnclaimedConversationClaimsItForTheCaller() {
+    var bob = userNamed("bob");
+    when(aiClient.stream(any(ChatRequest.class))).thenReturn(Flux.empty());
+
+    controller.streamChat("fresh", "hi", bob);
+
+    var saved =
+        org.mockito.ArgumentCaptor.forClass(
+            com.krizaka.orazaka.core.domain.model.chat.ChatSessionInfo.class);
+    verify(chatSessionService).save(saved.capture());
+    assertThat(saved.getValue().id()).isEqualTo("fresh");
+    assertThat(saved.getValue().userId()).isEqualTo(bob.id().toString());
   }
 
   // ── orazaka-conversation-service#14: a gone client must stop the upstream generation ──

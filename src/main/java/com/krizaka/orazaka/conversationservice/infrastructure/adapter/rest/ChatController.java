@@ -13,7 +13,9 @@ import com.krizaka.orazaka.core.domain.model.chat.ChatResponse;
 import com.krizaka.orazaka.core.domain.model.chat.ChatSessionInfo;
 import com.krizaka.orazaka.core.domain.ports.inbound.AiClient;
 import com.krizaka.orazaka.core.domain.ports.inbound.ChatSessionService;
+import com.krizaka.orazaka.core.domain.ports.outbound.ChatMemoryStore;
 import com.krizaka.users.domain.model.User;
+import com.krizaka.web.problem.NotFoundException;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,12 +58,18 @@ public class ChatController {
 
   private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
 
+  /** Problem code of a conversation or session the caller does not own — or that does not exist. */
+  public static final String SESSION_NOT_FOUND = "session-not-found";
+
+  private static final String DEFAULT_TITLE = "New Memory Block";
+
   private final AiClient aiClient;
   private final ContextService contextService;
   private final DynamicPipelineExecutor pipelineExecutor;
   private final ChatStreamRegistry chatStreamRegistry;
   private final SseStreamGateway sseStreamGateway;
   private final ChatSessionService chatSessionService;
+  private final ChatMemoryStore chatMemoryStore;
   private final int jobTimeoutSeconds;
 
   public ChatController(
@@ -70,6 +79,7 @@ public class ChatController {
       ChatStreamRegistry chatStreamRegistry,
       SseStreamGateway sseStreamGateway,
       ChatSessionService chatSessionService,
+      ChatMemoryStore chatMemoryStore,
       JobsProperties jobsProperties) {
     this.aiClient = aiClient;
     this.contextService = contextService;
@@ -78,6 +88,8 @@ public class ChatController {
     this.sseStreamGateway = sseStreamGateway;
     this.chatSessionService =
         Objects.requireNonNull(chatSessionService, "ChatSessionService must not be null");
+    this.chatMemoryStore =
+        Objects.requireNonNull(chatMemoryStore, "ChatMemoryStore must not be null");
     this.jobTimeoutSeconds = jobsProperties.executionTimeout();
   }
 
@@ -91,6 +103,7 @@ public class ChatController {
       @AuthenticationPrincipal User user) {
     // The conversation, never the prompt: a log keeps no data class (ADR-064).
     logger.debug("SSE GET stream: conversation={}", conversationId);
+    claimConversation(conversationId, user);
     return streamSse(
         conversationId, new ChatRequest(prompt, null, null, resolveContext(user, conversationId)));
   }
@@ -106,6 +119,7 @@ public class ChatController {
       @AuthenticationPrincipal User user) {
     logger.debug(
         "SSE POST stream: conversation={}, assetIds={}", conversationId, requestPayload.assetIds());
+    claimConversation(conversationId, user);
     Map<String, Object> settings = new HashMap<>();
     settings.put("assetIds", requestPayload.assetIds());
     if (requestPayload.model() != null) {
@@ -126,6 +140,34 @@ public class ChatController {
         new ChatRequest(
             requestPayload.prompt(), null, settings, resolveContext(user, conversationId)),
         requestPayload.pipelineId());
+  }
+
+  /**
+   * A conversation's history is keyed by its id alone, so streaming into an id is reading and
+   * writing that history: it is allowed only to the session's owner. An id nobody owns yet becomes
+   * the caller's; an id someone else owns is a 404, the same answer as for a missing one, so
+   * existence never leaks (orazaka-conversation-service#17).
+   */
+  private void claimConversation(String conversationId, User user) {
+    String userId = user.id().toString();
+    var existing = chatSessionService.getSession(conversationId);
+    if (existing.isPresent()) {
+      if (!userId.equals(existing.get().userId())) {
+        throw new NotFoundException(SESSION_NOT_FOUND, "No conversation " + conversationId + ".");
+      }
+      return;
+    }
+    chatSessionService.save(
+        new ChatSessionInfo(conversationId, userId, DEFAULT_TITLE, Instant.now()));
+  }
+
+  /**
+   * The session when it exists and is the caller's; empty otherwise (missing and foreign alike).
+   */
+  private Optional<ChatSessionInfo> ownedSession(String sessionId, User user) {
+    return chatSessionService
+        .getSession(sessionId)
+        .filter(session -> user.id().toString().equals(session.userId()));
   }
 
   private Context resolveContext(User user, String conversationId) {
@@ -256,7 +298,12 @@ public class ChatController {
     if (id == null || id.isBlank()) {
       id = UUID.randomUUID().toString();
     }
-    String title = body.getOrDefault("title", "New Memory Block");
+    // An id already taken by someone else must not be overwritten (an upsert is a takeover).
+    var taken = chatSessionService.getSession(id);
+    if (taken.isPresent() && !user.id().toString().equals(taken.get().userId())) {
+      return ResponseEntity.notFound().build();
+    }
+    String title = body.getOrDefault("title", DEFAULT_TITLE);
     ChatSessionInfo session = new ChatSessionInfo(id, user.id().toString(), title, Instant.now());
     return ResponseEntity.ok(chatSessionService.save(session));
   }
@@ -270,8 +317,7 @@ public class ChatController {
     if (title == null || title.isBlank()) {
       return ResponseEntity.badRequest().build();
     }
-    return chatSessionService
-        .getSession(sessionId)
+    return ownedSession(sessionId, user)
         .map(
             session -> {
               ChatSessionInfo updated =
@@ -284,7 +330,13 @@ public class ChatController {
   @DeleteMapping("/sessions/{sessionId}")
   public ResponseEntity<Void> deleteSession(
       @PathVariable String sessionId, @AuthenticationPrincipal User user) {
+    if (ownedSession(sessionId, user).isEmpty()) {
+      return ResponseEntity.notFound().build();
+    }
+    // The messages go with the session: they are keyed by the id alone, so orphans would be
+    // readable by whoever next claims it.
+    chatMemoryStore.clear(sessionId);
     chatSessionService.deleteSession(sessionId);
-    return ResponseEntity.ok().build();
+    return ResponseEntity.noContent().build();
   }
 }

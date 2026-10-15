@@ -135,7 +135,8 @@ class JobControllerTest {
             Instant.now(FIXED_CLOCK));
     when(jobService.getJob("job-1")).thenReturn(Optional.of(info));
 
-    ResponseEntity<JobInfo> response = jobController.getJob("job-1");
+    ResponseEntity<JobInfo> response =
+        jobController.getJob("job-1", userWithId("root", "ROLE_ADMIN"));
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(info, response.getBody());
@@ -146,7 +147,9 @@ class JobControllerTest {
     when(jobService.getJob("job-1")).thenReturn(Optional.empty());
 
     NotFoundException missing =
-        assertThrows(NotFoundException.class, () -> jobController.getJob("job-1"));
+        assertThrows(
+            NotFoundException.class,
+            () -> jobController.getJob("job-1", userWithId("root", "ROLE_ADMIN")));
 
     assertEquals(HttpStatus.NOT_FOUND, missing.status());
     assertEquals(JobController.JOB_NOT_FOUND, missing.code());
@@ -196,7 +199,8 @@ class JobControllerTest {
     when(jobService.getJob("job-1")).thenReturn(Optional.of(info));
 
     ResponseEntity<Void> response =
-        jobController.updateJobProgress("job-1", new JobController.JobProgressRequest(40));
+        jobController.updateJobProgress(
+            "job-1", new JobController.JobProgressRequest(40), userWithId("root", "ROLE_ADMIN"));
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     verify(jobStreamService).broadcastProgress("job-1", "user-1", 40);
@@ -206,10 +210,14 @@ class JobControllerTest {
   void testUpdateJobProgressNotFound() {
     when(jobService.getJob("job-1")).thenReturn(Optional.empty());
 
-    ResponseEntity<Void> response =
-        jobController.updateJobProgress("job-1", new JobController.JobProgressRequest(40));
-
-    assertEquals(HttpStatus.OK, response.getStatusCode());
+    // 404 like any unreadable job (#17): progress used to answer 200 to anyone, unauthenticated.
+    assertThrows(
+        NotFoundException.class,
+        () ->
+            jobController.updateJobProgress(
+                "job-1",
+                new JobController.JobProgressRequest(40),
+                userWithId("root", "ROLE_ADMIN")));
     verify(jobStreamService, never()).broadcastProgress(anyString(), anyString(), anyInt());
   }
 
@@ -293,5 +301,83 @@ class JobControllerTest {
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(42, response.getBody());
+  }
+
+  // ── orazaka-conversation-service#17: a job is its owner's (or an admin's) ──
+
+  private static User userWithId(String id, String authority) {
+    // User ids are UUIDs: derive a stable one from the label, and let JobInfo carry the same text.
+    return new User(
+        UUID.nameUUIDFromBytes(id.getBytes()),
+        id,
+        id + "@test.class",
+        true,
+        Set.of(authority),
+        Map.of());
+  }
+
+  private JobInfo jobOwnedBy(String ownerLabel) {
+    String ownerId = UUID.nameUUIDFromBytes(ownerLabel.getBytes()).toString();
+    JobInfo info =
+        new JobInfo(
+            "job-x",
+            ownerId,
+            "video",
+            JobStatus.PROCESSING,
+            Map.of(),
+            Map.of(),
+            null,
+            Instant.now(FIXED_CLOCK),
+            Instant.now(FIXED_CLOCK));
+    when(jobService.getJob("job-x")).thenReturn(Optional.of(info));
+    return info;
+  }
+
+  @Test
+  void aUserCannotReadAnotherUsersJob() {
+    jobOwnedBy("alice");
+
+    assertThrows(
+        NotFoundException.class,
+        () -> jobController.getJob("job-x", userWithId("bob", "ROLE_USER")));
+  }
+
+  @Test
+  void theOwnerAndAnAdminCanReadAJob() {
+    JobInfo info = jobOwnedBy("alice");
+
+    assertEquals(info, jobController.getJob("job-x", userWithId("alice", "ROLE_USER")).getBody());
+    assertEquals(info, jobController.getJob("job-x", userWithId("root", "ROLE_ADMIN")).getBody());
+  }
+
+  @Test
+  void aUserCannotPushProgressOnAnotherUsersJob() {
+    jobOwnedBy("alice");
+
+    assertThrows(
+        NotFoundException.class,
+        () ->
+            jobController.updateJobProgress(
+                "job-x", new JobController.JobProgressRequest(99), userWithId("bob", "ROLE_USER")));
+    verify(jobStreamService, never()).broadcastProgress(anyString(), anyString(), anyInt());
+  }
+
+  @Test
+  void aUserCannotApproveOrRevokeAnotherUsersJobAndTheHeaderIsNoLongerTrusted() {
+    jobOwnedBy("alice");
+    User bob = userWithId("bob", "ROLE_USER");
+
+    assertThrows(NotFoundException.class, () -> jobController.approveJob("job-x", bob));
+    assertThrows(NotFoundException.class, () -> jobController.revokeJob("job-x", bob));
+    verify(jobQueuePublisher, never()).publishApproval(anyString(), anyString());
+  }
+
+  @Test
+  void theOwnerApprovesAsThemselves() {
+    jobOwnedBy("alice");
+    User alice = userWithId("alice", "ROLE_USER");
+
+    assertEquals(HttpStatus.OK, jobController.approveJob("job-x", alice).getStatusCode());
+    verify(jobQueuePublisher).publishApproval("job-x", alice.id().toString());
   }
 }
