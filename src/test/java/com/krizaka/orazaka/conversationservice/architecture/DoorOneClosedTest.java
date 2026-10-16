@@ -1,7 +1,6 @@
 package com.krizaka.orazaka.conversationservice.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -43,71 +42,64 @@ class DoorOneClosedTest {
   @Test
   @DisplayName("[ADR-068] no REST controller of this service creates a job")
   void noRestEntryCreatesAJob() {
-    assertDoesNotThrow(
-        () -> {
-          noClasses()
-              .that()
-              .resideInAPackage(
-                  "com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest..")
-              .should()
-              .callMethod(
-                  com.krizaka.orazaka.core.domain.ports.inbound.JobService.class,
-                  "createJob",
-                  String.class,
-                  String.class,
-                  java.util.Map.class,
-                  com.krizaka.orazaka.jobs.domain.model.DataClass.class)
-              .orShould()
-              .callMethod(
-                  com.krizaka.orazaka.core.domain.ports.inbound.JobService.class,
-                  "createJob",
-                  String.class,
-                  String.class,
-                  String.class,
-                  java.util.Map.class,
-                  com.krizaka.orazaka.jobs.domain.model.DataClass.class)
-              .orShould()
-              .callMethod(
-                  com.krizaka.orazaka.conversationservice.application.service
-                      .JobQueuePublisherService.class,
-                  "publish",
-                  com.krizaka.orazaka.jobs.domain.model.JobCommand.class)
-              .because(
-                  "a capability invoked over HTTP without a run carries none of the controls a run"
-                      + " carries: no data class from its pack, no retention by that class, no audit"
-                      + " trail and no scope guard. That is what door 1 was (ADR-068 §5), and a"
-                      + " controller that mints a job is door 1 coming back")
-              .check(PRODUCTION_CLASSES);
-        });
+    noClasses()
+        .that()
+        .resideInAPackage("com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest..")
+        .should()
+        .callMethod(
+            com.krizaka.orazaka.core.domain.ports.inbound.JobService.class,
+            "createJob",
+            String.class,
+            String.class,
+            java.util.Map.class,
+            com.krizaka.orazaka.jobs.domain.model.DataClass.class)
+        .orShould()
+        .callMethod(
+            com.krizaka.orazaka.core.domain.ports.inbound.JobService.class,
+            "createJob",
+            String.class,
+            String.class,
+            String.class,
+            java.util.Map.class,
+            com.krizaka.orazaka.jobs.domain.model.DataClass.class)
+        .orShould()
+        .callMethod(
+            com.krizaka.orazaka.conversationservice.application.service.JobQueuePublisherService
+                .class,
+            "publish",
+            com.krizaka.orazaka.jobs.domain.model.JobCommand.class)
+        .because(
+            "a capability invoked over HTTP without a run carries none of the controls a run"
+                + " carries: no data class from its pack, no retention by that class, no audit"
+                + " trail and no scope guard. That is what door 1 was (ADR-068 §5), and a"
+                + " controller that mints a job is door 1 coming back")
+        .check(PRODUCTION_CLASSES);
   }
 
   @Test
   @DisplayName("[ADR-068] no application service of this service publishes a job command either")
   void noApplicationServicePublishesAJobCommand() {
-    assertDoesNotThrow(
-        () -> {
-          // The controllers delegated: MediaGenerationController through MediaJobService, the
-          // analysis
-          // paths through JobSubmissionService. Deleting the controllers and leaving the services
-          // would
-          // have left door 1 one @PostMapping away, so the delegates are covered too — everything
-          // except
-          // the publisher itself and the automation approval path that legitimately uses it.
-          noClasses()
-              .that()
-              .resideInAPackage("com.krizaka.orazaka.conversationservice.application.service")
-              .and()
-              .haveSimpleNameNotEndingWith("JobQueuePublisherService")
-              .should()
-              .callMethod(
-                  com.krizaka.orazaka.conversationservice.application.service
-                      .JobQueuePublisherService.class,
-                  "publish",
-                  com.krizaka.orazaka.jobs.domain.model.JobCommand.class)
-              .because(
-                  "the only producer of a job command is the studio outbox (ADR-067): a run's step"
-                      + " dispatch, durable with the state that describes it")
-              .check(PRODUCTION_CLASSES);
-        });
+    // The controllers delegated: MediaGenerationController through MediaJobService, the
+    // analysis
+    // paths through JobSubmissionService. Deleting the controllers and leaving the services
+    // would
+    // have left door 1 one @PostMapping away, so the delegates are covered too — everything
+    // except
+    // the publisher itself and the automation approval path that legitimately uses it.
+    noClasses()
+        .that()
+        .resideInAPackage("com.krizaka.orazaka.conversationservice.application.service")
+        .and()
+        .haveSimpleNameNotEndingWith("JobQueuePublisherService")
+        .should()
+        .callMethod(
+            com.krizaka.orazaka.conversationservice.application.service.JobQueuePublisherService
+                .class,
+            "publish",
+            com.krizaka.orazaka.jobs.domain.model.JobCommand.class)
+        .because(
+            "the only producer of a job command is the studio outbox (ADR-067): a run's step"
+                + " dispatch, durable with the state that describes it")
+        .check(PRODUCTION_CLASSES);
   }
 }
