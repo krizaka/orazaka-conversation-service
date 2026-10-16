@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
@@ -93,7 +92,7 @@ public class MediaAnalysisController {
         return ResponseEntity.badRequest().body("Invalid jobId format");
       }
 
-      Path basePath = Paths.get(uploadDir).toRealPath();
+      Path basePath = Path.of(uploadDir).toRealPath();
       Path userDirPath;
       if (sanitizedJobId != null) {
         userDirPath = basePath.resolve(userId).resolve(sanitizedJobId).resolve("input");

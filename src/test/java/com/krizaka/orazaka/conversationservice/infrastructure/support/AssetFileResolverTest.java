@@ -15,7 +15,7 @@ class AssetFileResolverTest {
   @TempDir Path tempDir;
 
   @Test
-  void testResolveFromTempDir() throws IOException {
+  void resolveFromTempDir() throws IOException {
     // Setup directory structure: uploadDir/userId/temp
     Path uploadDir = tempDir.resolve("uploads");
     Path userDir = uploadDir.resolve("user123");
@@ -33,7 +33,7 @@ class AssetFileResolverTest {
   }
 
   @Test
-  void testResolveFromUserDir() throws IOException {
+  void resolveFromUserDir() throws IOException {
     // Setup directory structure: uploadDir/userId
     Path uploadDir = tempDir.resolve("uploads");
     Path userDir = uploadDir.resolve("user123");
@@ -50,7 +50,7 @@ class AssetFileResolverTest {
   }
 
   @Test
-  void testResolveNotFound() throws IOException {
+  void resolveNotFound() throws IOException {
     Path uploadDir = tempDir.resolve("uploads");
     Path userDir = uploadDir.resolve("user123");
     Files.createDirectories(userDir);
@@ -62,7 +62,7 @@ class AssetFileResolverTest {
   }
 
   @Test
-  void testResolveDirectoriesNotExist() {
+  void resolveDirectoriesNotExist() {
     Optional<File> resolved =
         AssetFileResolver.resolve("/nonexistent-root-dir/uploads", "user123", "prefix");
     assertThat(resolved).isEmpty();

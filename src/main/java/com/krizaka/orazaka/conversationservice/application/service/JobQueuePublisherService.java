@@ -167,7 +167,9 @@ public class JobQueuePublisherService {
 
   /** Strips CR/LF and control characters to prevent log injection. */
   private static String sanitize(String input) {
-    if (input == null) return "null";
+    if (input == null) {
+      return "null";
+    }
     return input.replaceAll("[\\r\\n\\t]", "_");
   }
 }

@@ -9,7 +9,6 @@ import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvid
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -94,7 +93,7 @@ public class JobReconciliationService {
       return false;
     }
     Path resultPath =
-        Paths.get(uploadDir, job.userId(), job.id(), "output", "result.json")
+        Path.of(uploadDir, job.userId(), job.id(), "output", "result.json")
             .toAbsolutePath()
             .normalize();
     if (!Files.isRegularFile(resultPath)) {

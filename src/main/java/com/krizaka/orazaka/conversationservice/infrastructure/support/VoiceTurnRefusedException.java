@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.support;
 
 import com.krizaka.web.problem.DomainException;
+import java.io.Serial;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -9,7 +10,7 @@ import org.springframework.http.HttpStatus;
  */
 public class VoiceTurnRefusedException extends DomainException {
 
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   /**
    * @param status the HTTP status

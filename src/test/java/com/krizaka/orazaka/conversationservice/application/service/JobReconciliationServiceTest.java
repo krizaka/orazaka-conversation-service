@@ -1,10 +1,6 @@
 package com.krizaka.orazaka.conversationservice.application.service;
 
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.krizaka.orazaka.conversationservice.infrastructure.config.RouterProperties;
 import com.krizaka.orazaka.persistence.domain.model.JobDto;

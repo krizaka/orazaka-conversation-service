@@ -2,13 +2,8 @@ package com.krizaka.orazaka.conversationservice.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import com.krizaka.billing.domain.model.BillableCapability;
 import com.krizaka.billing.domain.model.CreditHoldResponse;
@@ -185,10 +180,10 @@ class VoiceTurnServiceTest {
     assertThat(sentences)
         .extracting(VoiceTurnEvent.Sentence::text)
         .containsExactly("Je t'écoute, prends ton temps.", "Qu'est-ce qui a pesé le plus ?");
-    assertThat(sentences.get(0).audio().contentType()).isEqualTo("audio/wav");
-    assertThat(sentences.get(0).audio().durationMs()).isEqualTo(1_000L);
-    assertThat(sentences.get(0).audio().voice()).isEqualTo("piper-fr-siwis-medium");
-    assertThat(sentences.get(0).audio().url()).startsWith(VoiceClipStore.PATH);
+    assertThat(sentences.getFirst().audio().contentType()).isEqualTo("audio/wav");
+    assertThat(sentences.getFirst().audio().durationMs()).isEqualTo(1_000L);
+    assertThat(sentences.getFirst().audio().voice()).isEqualTo("piper-fr-siwis-medium");
+    assertThat(sentences.getFirst().audio().url()).startsWith(VoiceClipStore.PATH);
     VoiceTurnEvent.Done done = (VoiceTurnEvent.Done) events.getLast();
     assertThat(done.usage().ttsSeconds()).isEqualTo(2.0);
     assertThat(done.timings().firstSentenceMs()).isNotNull();
@@ -258,7 +253,7 @@ class VoiceTurnServiceTest {
             SIWIS, new BigDecimal("6"), TokenUsage.reported(100, 200, 300), 120L);
 
     assertThat(steps).hasSize(3);
-    assertThat(steps.get(0).consumption().audioSeconds()).isEqualByComparingTo("6");
+    assertThat(steps.getFirst().consumption().audioSeconds()).isEqualByComparingTo("6");
     assertThat(steps.get(1).capability()).isEqualTo(BillableCapability.CHAT);
     assertThat(steps.get(1).consumption().tokens()).isEqualTo(300L);
     assertThat(steps.get(2).consumption().characters()).isEqualTo(120L);

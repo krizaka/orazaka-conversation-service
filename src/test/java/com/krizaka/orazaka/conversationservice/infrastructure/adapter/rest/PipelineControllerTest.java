@@ -64,7 +64,7 @@ class PipelineControllerTest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).hasSize(2);
-    assertThat(response.getBody().get(0).stepType()).isEqualTo(ValidationStepType.STRUCTURAL_A);
+    assertThat(response.getBody().getFirst().stepType()).isEqualTo(ValidationStepType.STRUCTURAL_A);
     assertThat(response.getBody().get(1).stepType()).isEqualTo(ValidationStepType.TDR_D);
   }
 

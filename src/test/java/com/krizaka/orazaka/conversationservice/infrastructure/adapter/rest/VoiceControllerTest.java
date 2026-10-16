@@ -3,9 +3,7 @@ package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import com.krizaka.orazaka.conversationservice.application.service.VoiceTurnService;
 import com.krizaka.orazaka.conversationservice.domain.model.voice.VoiceClip;
