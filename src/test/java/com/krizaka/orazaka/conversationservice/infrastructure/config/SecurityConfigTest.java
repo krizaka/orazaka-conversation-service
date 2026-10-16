@@ -58,7 +58,7 @@ class SecurityConfigTest {
   }
 
   @Test
-  void testAuthenticationManagerSuccess() {
+  void authenticationManagerSuccess() {
     String token = "valid-session-jwt";
     UUID id = UUID.randomUUID();
     User user = new User(id, "testuser", "test@example.class", true, Set.of("ROLE_USER"), Map.of());
@@ -78,7 +78,7 @@ class SecurityConfigTest {
   }
 
   @Test
-  void testAuthenticationManagerNonJwtTokenRejected() {
+  void authenticationManagerNonJwtTokenRejected() {
     // Legacy user-id tokens died at the Phase 2 cutover: a session token MUST be a JWT.
     String token = "550e8400-e29b-41d4-a716-446655440001";
     when(identityJwtDecoder.decode(token)).thenThrow(new BadJwtException("not a jwt"));
@@ -91,7 +91,7 @@ class SecurityConfigTest {
   }
 
   @Test
-  void testAuthenticationManagerUserDisabled() {
+  void authenticationManagerUserDisabled() {
     String token = "valid-session-jwt";
     UUID id = UUID.randomUUID();
     User user =
@@ -106,7 +106,7 @@ class SecurityConfigTest {
   }
 
   @Test
-  void testAuthenticationManagerExceptionThrown() {
+  void authenticationManagerExceptionThrown() {
     String token = "valid-session-jwt";
     UUID id = UUID.randomUUID();
     stubJwt(token, id.toString());
@@ -120,7 +120,7 @@ class SecurityConfigTest {
   }
 
   @Test
-  void testAuthenticationManagerUnsupportedToken() {
+  void authenticationManagerUnsupportedToken() {
     AuthenticationManager manager = securityConfig.authenticationManager();
     Authentication authInput = mock(Authentication.class);
 

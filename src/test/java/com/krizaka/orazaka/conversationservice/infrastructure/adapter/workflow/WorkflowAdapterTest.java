@@ -58,8 +58,8 @@ class WorkflowAdapterTest {
     ChatRequest capturedRequest = captor.getValue();
     assertEquals(userPrompt, capturedRequest.prompt());
     assertEquals(1, capturedRequest.messages().size());
-    assertEquals("system", capturedRequest.messages().get(0).role());
-    assertEquals("Mask PII data", capturedRequest.messages().get(0).content());
+    assertEquals("system", capturedRequest.messages().getFirst().role());
+    assertEquals("Mask PII data", capturedRequest.messages().getFirst().content());
     assertEquals("session-123", capturedRequest.context().conversationId());
     assertEquals("user-42", capturedRequest.context().userId());
 

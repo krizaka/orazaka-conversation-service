@@ -101,7 +101,8 @@ class EngineArchitectureTest {
         .because("All controllers must reside in their module's infrastructure.adapter.. package")
         .check(allAppClasses);
 
-    // Assert that controllers never bypass DynamicPipelineExecutor/AiClient/GraphEngine to call
+    // Assert that controllers never bypass DynamicPipelineExecutor/AiClient/GraphEngine to
+    // call
     // models directly
     noClasses()
         .that()

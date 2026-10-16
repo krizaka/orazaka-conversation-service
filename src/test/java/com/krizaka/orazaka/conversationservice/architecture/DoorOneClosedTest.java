@@ -79,9 +79,12 @@ class DoorOneClosedTest {
   @Test
   @DisplayName("[ADR-068] no application service of this service publishes a job command either")
   void noApplicationServicePublishesAJobCommand() {
-    // The controllers delegated: MediaGenerationController through MediaJobService, the analysis
-    // paths through JobSubmissionService. Deleting the controllers and leaving the services would
-    // have left door 1 one @PostMapping away, so the delegates are covered too — everything except
+    // The controllers delegated: MediaGenerationController through MediaJobService, the
+    // analysis
+    // paths through JobSubmissionService. Deleting the controllers and leaving the services
+    // would
+    // have left door 1 one @PostMapping away, so the delegates are covered too — everything
+    // except
     // the publisher itself and the automation approval path that legitimately uses it.
     noClasses()
         .that()

@@ -114,7 +114,7 @@ public class FeatureController {
   private static FeatureResponse toResponse(CapabilityDeclaration capability, NodeState state) {
     boolean available =
         !(state instanceof NodeState.Locked || state instanceof NodeState.Invisible);
-    String lockedReason = (state instanceof NodeState.Locked locked) ? locked.reason() : null;
+    String lockedReason = state instanceof NodeState.Locked locked ? locked.reason() : null;
     return new FeatureResponse(capability.featureKey(), available, lockedReason);
   }
 }

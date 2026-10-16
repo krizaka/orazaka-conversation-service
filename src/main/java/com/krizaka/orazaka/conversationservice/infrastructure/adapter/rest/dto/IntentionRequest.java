@@ -54,7 +54,7 @@ public record IntentionRequest(
         throw new IllegalArgumentException("prompt must not be blank");
       }
     }
-    inputs = (inputs == null) ? Map.of() : Map.copyOf(inputs);
+    inputs = inputs == null ? Map.of() : Map.copyOf(inputs);
   }
 
   /**

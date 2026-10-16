@@ -1,17 +1,6 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
-import com.krizaka.orazaka.business.api.AgentPayload;
-import com.krizaka.orazaka.business.api.Capability;
-import com.krizaka.orazaka.business.api.ChatPayload;
-import com.krizaka.orazaka.business.api.ExecutionMode;
-import com.krizaka.orazaka.business.api.ImagePayload;
-import com.krizaka.orazaka.business.api.Intention;
-import com.krizaka.orazaka.business.api.IntentionContext;
-import com.krizaka.orazaka.business.api.IntentionType;
-import com.krizaka.orazaka.business.api.Payload;
-import com.krizaka.orazaka.business.api.StudioPayload;
-import com.krizaka.orazaka.business.api.UseCaseDispatcher;
-import com.krizaka.orazaka.business.api.UseCaseResolutionException;
+import com.krizaka.orazaka.business.api.*;
 import com.krizaka.orazaka.conversationservice.application.service.GateService;
 import com.krizaka.orazaka.conversationservice.domain.model.gate.AuthGate;
 import com.krizaka.orazaka.conversationservice.domain.model.gate.StaticGate;
@@ -114,7 +103,7 @@ public class IntentController {
         };
 
     IntentionType type =
-        (capability == Capability.CHAT) ? IntentionType.QUERY : IntentionType.COMMAND;
+        capability == Capability.CHAT ? IntentionType.QUERY : IntentionType.COMMAND;
     IntentionContext context =
         new IntentionContext(
             request.sessionId(),

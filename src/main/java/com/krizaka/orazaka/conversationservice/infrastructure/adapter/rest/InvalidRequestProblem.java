@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import com.krizaka.web.problem.DomainException;
+import java.io.Serial;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -9,7 +10,7 @@ import org.springframework.http.HttpStatus;
  */
 final class InvalidRequestProblem extends DomainException {
 
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   /** The stable code a client may branch on. */
   static final String CODE = "invalid-request";

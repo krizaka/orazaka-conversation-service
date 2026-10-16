@@ -16,6 +16,6 @@ public record VideoGenerationRequest(
     if (prompt == null || prompt.isBlank()) {
       throw new InvalidRequestException("Prompt is required");
     }
-    settings = (settings != null) ? Map.copyOf(settings) : Map.of();
+    settings = settings != null ? Map.copyOf(settings) : Map.of();
   }
 }

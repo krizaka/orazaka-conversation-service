@@ -27,7 +27,7 @@ class AgentControllerTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void testAgentStreamAndCleanupOnTimeout() throws Exception {
+  void agentStreamAndCleanupOnTimeout() throws Exception {
     com.krizaka.users.domain.model.User user =
         new com.krizaka.users.domain.model.User(
             java.util.UUID.fromString("00000000-0000-0000-0000-000000000123"),
@@ -62,7 +62,7 @@ class AgentControllerTest {
   }
 
   @Test
-  void testReceiveReport() {
+  void receiveReport() {
     com.krizaka.users.domain.model.User user =
         new com.krizaka.users.domain.model.User(
             java.util.UUID.fromString("00000000-0000-0000-0000-000000000123"),
@@ -86,7 +86,7 @@ class AgentControllerTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void testDispatchToAgentFailure() throws Exception {
+  void dispatchToAgentFailure() throws Exception {
     com.krizaka.users.domain.model.User user =
         new com.krizaka.users.domain.model.User(
             java.util.UUID.fromString("00000000-0000-0000-0000-000000000123"),

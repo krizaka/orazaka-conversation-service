@@ -227,7 +227,7 @@ class CrossModuleBoundaryTest {
       if (!Files.exists(path)) {
         path = Path.of("..", module, "src", "main", "java");
       }
-      if (!Files.exists(path) && module.equals("orazaka-conversation-service")) {
+      if (!Files.exists(path) && "orazaka-conversation-service".equals(module)) {
         path = Path.of("src", "main", "java");
       }
       if (Files.exists(path)) {

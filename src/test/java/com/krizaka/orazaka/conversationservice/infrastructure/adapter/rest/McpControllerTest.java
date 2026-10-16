@@ -49,7 +49,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testGetTools() {
+  void getTools() {
     McpToolInfo tool = new McpToolInfo("search", "Search engine", "{}");
     when(mcpService.getAvailableTools()).thenReturn(List.of(tool));
 
@@ -58,13 +58,13 @@ class McpControllerTest {
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertNotNull(response.getBody());
     assertEquals(1, response.getBody().size());
-    assertEquals("search", response.getBody().get(0).name());
-    assertEquals("Search engine", response.getBody().get(0).description());
-    assertEquals("{}", response.getBody().get(0).inputSchema());
+    assertEquals("search", response.getBody().getFirst().name());
+    assertEquals("Search engine", response.getBody().getFirst().description());
+    assertEquals("{}", response.getBody().getFirst().inputSchema());
   }
 
   @Test
-  void testExecuteToolSuccess() {
+  void executeToolSuccess() {
     when(mcpService.executeTool("search", "{\"query\":\"test\"}")).thenReturn("results");
 
     ResponseEntity<Map<String, Object>> response =
@@ -76,7 +76,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testExecuteToolNotFound() {
+  void executeToolNotFound() {
     when(mcpService.executeTool(eq("search"), anyString()))
         .thenThrow(new IllegalArgumentException("Not found"));
 
@@ -87,7 +87,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testExecuteToolJsonError() throws Exception {
+  void executeToolJsonError() throws Exception {
     ObjectMapper badMapper = mock(ObjectMapper.class);
     when(badMapper.writeValueAsString(any())).thenThrow(mock(JacksonException.class));
 
@@ -106,13 +106,13 @@ class McpControllerTest {
   }
 
   @Test
-  void testGetUserServersUnauthorized() {
+  void getUserServersUnauthorized() {
     ResponseEntity<List<UserMcpServerDto>> response = mcpController.getUserServers(null);
     assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
   }
 
   @Test
-  void testGetUserServersSuccess() {
+  void getUserServersSuccess() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
     UserMcpServerDto server =
@@ -132,11 +132,11 @@ class McpControllerTest {
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertNotNull(response.getBody());
     assertEquals(1, response.getBody().size());
-    assertEquals("Server1", response.getBody().get(0).label());
+    assertEquals("Server1", response.getBody().getFirst().label());
   }
 
   @Test
-  void testSaveUserServerUnauthorized() {
+  void saveUserServerUnauthorized() {
     UserMcpServerDto payload =
         new UserMcpServerDto(
             1, "123", "Server1", "http://server1", "token123", true, Instant.now(FIXED_CLOCK));
@@ -145,7 +145,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testSaveUserServerIdMismatch() {
+  void saveUserServerIdMismatch() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
     UserMcpServerDto payload =
@@ -165,7 +165,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testSaveUserServerEmptyUrl() {
+  void saveUserServerEmptyUrl() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
     UserMcpServerDto payload =
@@ -179,7 +179,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testSaveUserServerSuccess() {
+  void saveUserServerSuccess() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
     UserMcpServerDto payload =
@@ -200,13 +200,13 @@ class McpControllerTest {
   }
 
   @Test
-  void testDeleteUserServerUnauthorized() {
+  void deleteUserServerUnauthorized() {
     ResponseEntity<Object> response = mcpController.deleteUserServer(1, null);
     assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
   }
 
   @Test
-  void testDeleteUserServerNotFound() {
+  void deleteUserServerNotFound() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
     when(userMcpServerPersistenceProvider.findById(1)).thenReturn(Optional.empty());
@@ -217,7 +217,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testDeleteUserServerAccessDenied() {
+  void deleteUserServerAccessDenied() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
     UserMcpServerDto existing =
@@ -257,7 +257,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testDeleteUserServerSuccess() {
+  void deleteUserServerSuccess() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
     UserMcpServerDto existing =
@@ -278,7 +278,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testGetPlatformServers() {
+  void getPlatformServers() {
     PlatformMcpServerDto server =
         new PlatformMcpServerDto(
             1,
@@ -300,7 +300,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testSavePlatformServerBadRequest() {
+  void savePlatformServerBadRequest() {
     PlatformMcpServerDto payload =
         new PlatformMcpServerDto(
             1, "Platform1", "SSE", null, null, "args", "token123", true, Instant.now(FIXED_CLOCK));
@@ -312,7 +312,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testSavePlatformServerSuccess() {
+  void savePlatformServerSuccess() {
     PlatformMcpServerDto payload =
         new PlatformMcpServerDto(
             1,
@@ -333,7 +333,7 @@ class McpControllerTest {
   }
 
   @Test
-  void testDeletePlatformServer() {
+  void deletePlatformServer() {
     ResponseEntity<Void> response = mcpController.deletePlatformServer(1);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());

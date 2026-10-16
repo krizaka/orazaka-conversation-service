@@ -1,9 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.amqp;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.krizaka.orazaka.conversationservice.application.service.JobStreamService;
 import com.krizaka.orazaka.persistence.domain.model.JobDto;

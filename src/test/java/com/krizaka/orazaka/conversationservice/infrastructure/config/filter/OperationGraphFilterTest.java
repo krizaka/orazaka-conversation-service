@@ -40,7 +40,7 @@ class OperationGraphFilterTest {
   }
 
   @Test
-  void testFilterAllowsActiveOperation() throws Exception {
+  void filterAllowsActiveOperation() throws Exception {
     OperationGraph graph =
         new OperationGraph(
             List.of(
@@ -62,7 +62,7 @@ class OperationGraphFilterTest {
   }
 
   @Test
-  void testFilterBlocksLockedOperation() throws Exception {
+  void filterBlocksLockedOperation() throws Exception {
     OperationGraph graph =
         new OperationGraph(
             List.of(

@@ -66,7 +66,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testGetJobsAdmin() {
+  void getJobsAdmin() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "admin", "admin@test.class", true, Set.of("ROLE_ADMIN"), Map.of());
     Page<JobInfo> expectedPage =
@@ -93,7 +93,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testGetJobsUser() {
+  void getJobsUser() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "user", "user@test.class", true, Set.of("ROLE_USER"), Map.of());
     Page<JobInfo> expectedPage =
@@ -121,7 +121,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testGetJobFound() {
+  void getJobFound() {
     JobInfo info =
         new JobInfo(
             "job-1",
@@ -143,7 +143,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testGetJobNotFound() {
+  void getJobNotFound() {
     when(jobService.getJob("job-1")).thenReturn(Optional.empty());
 
     NotFoundException missing =
@@ -156,7 +156,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testStreamJobs() {
+  void streamJobs() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "user", "user@test.class", true, Set.of("ROLE_USER"), Map.of());
     SseEmitter emitter = new SseEmitter();
@@ -168,7 +168,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testJobProgressRequestValidation() {
+  void jobProgressRequestValidation() {
     // Valid
     var req = new JobController.JobProgressRequest(50);
     assertEquals(50, req.progress());
@@ -184,7 +184,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testUpdateJobProgressFound() {
+  void updateJobProgressFound() {
     JobInfo info =
         new JobInfo(
             "job-1",
@@ -207,7 +207,7 @@ class JobControllerTest {
   }
 
   @Test
-  void testUpdateJobProgressNotFound() {
+  void updateJobProgressNotFound() {
     when(jobService.getJob("job-1")).thenReturn(Optional.empty());
 
     // 404 like any unreadable job (#17): progress used to answer 200 to anyone, unauthenticated.

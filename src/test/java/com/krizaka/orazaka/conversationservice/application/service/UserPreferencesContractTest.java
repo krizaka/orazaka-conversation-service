@@ -2,9 +2,7 @@ package com.krizaka.orazaka.conversationservice.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.krizaka.billing.domain.model.CreditHoldCommand;
 import com.krizaka.billing.domain.model.CreditHoldResponse;
