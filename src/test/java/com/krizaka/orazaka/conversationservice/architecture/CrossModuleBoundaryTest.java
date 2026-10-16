@@ -3,7 +3,6 @@ package com.krizaka.orazaka.conversationservice.architecture;
 import static com.krizaka.orazaka.test.TestConstants.*;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.krizaka.orazaka.core.application.interceptor.PromptContextInterceptor;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -65,25 +64,22 @@ class CrossModuleBoundaryTest {
   @DisplayName(
       "[ERR-102] Persistence must contain zero dependencies pointing toward identity or core")
   void persistenceIsIsolated() {
-    assertDoesNotThrow(
-        () -> {
-          noClasses()
-              .that()
-              .resideInAPackage("com.krizaka.orazaka.persistence..")
-              .and()
-              .resideOutsideOfPackage("com.krizaka.orazaka.persistence.bridge..")
-              .and()
-              .haveSimpleNameNotEndingWith("EventAdapter")
-              .should()
-              .dependOnClassesThat()
-              .resideInAPackage(PKG_IDENTITY)
-              .orShould()
-              .dependOnClassesThat()
-              .resideInAPackage(PKG_CORE)
-              .because(
-                  "orazaka-persistence-app and krizaka-users-persistence are decoupled technical ledgers and must remain completely agnostic of orchestration and identity domains; the exceptions are EventAdapters and the orazaka-persistence-bridge adapter layer (com.krizaka.orazaka.persistence.bridge), whose job is to implement the core's outbound ports")
-              .check(allModuleClasses);
-        });
+    noClasses()
+        .that()
+        .resideInAPackage("com.krizaka.orazaka.persistence..")
+        .and()
+        .resideOutsideOfPackage("com.krizaka.orazaka.persistence.bridge..")
+        .and()
+        .haveSimpleNameNotEndingWith("EventAdapter")
+        .should()
+        .dependOnClassesThat()
+        .resideInAPackage(PKG_IDENTITY)
+        .orShould()
+        .dependOnClassesThat()
+        .resideInAPackage(PKG_CORE)
+        .because(
+            "orazaka-persistence-app and krizaka-users-persistence are decoupled technical ledgers and must remain completely agnostic of orchestration and identity domains; the exceptions are EventAdapters and the orazaka-persistence-bridge adapter layer (com.krizaka.orazaka.persistence.bridge), whose job is to implement the core's outbound ports")
+        .check(allModuleClasses);
   }
 
   // ── core isolation ──────────────────────────────────────────────────────────
@@ -91,36 +87,30 @@ class CrossModuleBoundaryTest {
   @Test
   @DisplayName("[ERR-102] Core must not depend on identity layer")
   void coreIsIdentityBlind() {
-    assertDoesNotThrow(
-        () -> {
-          noClasses()
-              .that()
-              .resideInAPackage(PKG_CORE)
-              .should()
-              .dependOnClassesThat()
-              .resideInAPackage(PKG_IDENTITY)
-              .because(
-                  "orazaka-core must remain 100% identity-agnostic. "
-                      + "Only orazaka-router may call identity services, and core must only interact via public interfaces [ERR-102, §1.A]")
-              .check(allModuleClasses);
-        });
+    noClasses()
+        .that()
+        .resideInAPackage(PKG_CORE)
+        .should()
+        .dependOnClassesThat()
+        .resideInAPackage(PKG_IDENTITY)
+        .because(
+            "orazaka-core must remain 100% identity-agnostic. "
+                + "Only orazaka-router may call identity services, and core must only interact via public interfaces [ERR-102, §1.A]")
+        .check(allModuleClasses);
   }
 
   @Test
   @DisplayName("[ERR-102] Core must not depend on tools layer")
   void coreIsToolsBlind() {
-    assertDoesNotThrow(
-        () -> {
-          noClasses()
-              .that()
-              .resideInAPackage(PKG_CORE)
-              .should()
-              .dependOnClassesThat()
-              .resideInAPackage(PKG_TOOLS)
-              .because(
-                  "orazaka-core defines ports (interfaces); it must never import tool adapters [ERR-102]")
-              .check(allModuleClasses);
-        });
+    noClasses()
+        .that()
+        .resideInAPackage(PKG_CORE)
+        .should()
+        .dependOnClassesThat()
+        .resideInAPackage(PKG_TOOLS)
+        .because(
+            "orazaka-core defines ports (interfaces); it must never import tool adapters [ERR-102]")
+        .check(allModuleClasses);
   }
 
   // ── tools isolation ─────────────────────────────────────────────────────────
@@ -128,19 +118,16 @@ class CrossModuleBoundaryTest {
   @Test
   @DisplayName("[ERR-102] Tools must not depend on identity layer")
   void toolsAreIdentityBlind() {
-    assertDoesNotThrow(
-        () -> {
-          noClasses()
-              .that()
-              .resideInAPackage(PKG_TOOLS)
-              .should()
-              .dependOnClassesThat()
-              .resideInAPackage(PKG_IDENTITY)
-              .because(
-                  "orazaka-tools is stateless regarding user identity. "
-                      + "Context is injected by the router as primitives [ERR-102]")
-              .check(allModuleClasses);
-        });
+    noClasses()
+        .that()
+        .resideInAPackage(PKG_TOOLS)
+        .should()
+        .dependOnClassesThat()
+        .resideInAPackage(PKG_IDENTITY)
+        .because(
+            "orazaka-tools is stateless regarding user identity. "
+                + "Context is injected by the router as primitives [ERR-102]")
+        .check(allModuleClasses);
   }
 
   // ── identity isolation ──────────────────────────────────────────────────────
@@ -148,35 +135,29 @@ class CrossModuleBoundaryTest {
   @Test
   @DisplayName("[ERR-102] Identity must not depend on core layer")
   void identityIsCoreBlind() {
-    assertDoesNotThrow(
-        () -> {
-          noClasses()
-              .that()
-              .resideInAPackage(PKG_IDENTITY)
-              .should()
-              .dependOnClassesThat()
-              .resideInAPackage(PKG_CORE)
-              .because(
-                  "krizaka-users-core is a pure IAM domain hexagon and must never "
-                      + "import AI orchestration types from orazaka-core [ERR-102]")
-              .check(allModuleClasses);
-        });
+    noClasses()
+        .that()
+        .resideInAPackage(PKG_IDENTITY)
+        .should()
+        .dependOnClassesThat()
+        .resideInAPackage(PKG_CORE)
+        .because(
+            "krizaka-users-core is a pure IAM domain hexagon and must never "
+                + "import AI orchestration types from orazaka-core [ERR-102]")
+        .check(allModuleClasses);
   }
 
   @Test
   @DisplayName("[ERR-102] Identity must not depend on tools layer")
   void identityIsToolsBlind() {
-    assertDoesNotThrow(
-        () -> {
-          noClasses()
-              .that()
-              .resideInAPackage(PKG_IDENTITY)
-              .should()
-              .dependOnClassesThat()
-              .resideInAPackage(PKG_TOOLS)
-              .because("krizaka-users-core must never import tool implementations [ERR-102]")
-              .check(allModuleClasses);
-        });
+    noClasses()
+        .that()
+        .resideInAPackage(PKG_IDENTITY)
+        .should()
+        .dependOnClassesThat()
+        .resideInAPackage(PKG_TOOLS)
+        .because("krizaka-users-core must never import tool implementations [ERR-102]")
+        .check(allModuleClasses);
   }
 
   // ── naming governance ─────────────────────────────────────────────────────
@@ -184,57 +165,48 @@ class CrossModuleBoundaryTest {
   @Test
   @DisplayName("[ERR-104] No redundant 'Orazaka' prefix on internal types")
   void noRedundantProjectPrefix() {
-    assertDoesNotThrow(
-        () -> {
-          classes()
-              .that()
-              .resideInAPackage("com.krizaka.orazaka..")
-              .should()
-              .haveSimpleNameNotStartingWith("Orazaka")
-              .because(
-                  "The package namespace already establishes ownership. "
-                      + "Prefixes add semantic noise [ERR-104, Zero-Prefix Invariant].")
-              .check(allModuleClasses);
-        });
+    classes()
+        .that()
+        .resideInAPackage("com.krizaka.orazaka..")
+        .should()
+        .haveSimpleNameNotStartingWith("Orazaka")
+        .because(
+            "The package namespace already establishes ownership. "
+                + "Prefixes add semantic noise [ERR-104, Zero-Prefix Invariant].")
+        .check(allModuleClasses);
   }
 
   @Test
   @DisplayName("[GOV-004] Pipeline interceptors must carry role-broadcasting suffixes")
   void interceptorNamingConvention() {
-    assertDoesNotThrow(
-        () -> {
-          classes()
-              .that()
-              .resideInAPackage("com.krizaka.orazaka.interceptor..")
-              .and()
-              .implement(PromptContextInterceptor.class)
-              .should()
-              .haveSimpleNameEndingWith("Interceptor")
-              .orShould()
-              .haveSimpleNameEndingWith("Resolver")
-              .orShould()
-              .haveSimpleNameEndingWith("Injector")
-              .orShould()
-              .haveSimpleNameEndingWith("Advisor")
-              .orShould()
-              .haveSimpleNameEndingWith("Condenser")
-              .because(
-                  "Pipeline processors must explicitly broadcast their pattern role "
-                      + "via their suffix [GOV-004].")
-              .check(allModuleClasses);
-        });
+    classes()
+        .that()
+        .resideInAPackage("com.krizaka.orazaka.interceptor..")
+        .and()
+        .implement(PromptContextInterceptor.class)
+        .should()
+        .haveSimpleNameEndingWith("Interceptor")
+        .orShould()
+        .haveSimpleNameEndingWith("Resolver")
+        .orShould()
+        .haveSimpleNameEndingWith("Injector")
+        .orShould()
+        .haveSimpleNameEndingWith("Advisor")
+        .orShould()
+        .haveSimpleNameEndingWith("Condenser")
+        .because(
+            "Pipeline processors must explicitly broadcast their pattern role "
+                + "via their suffix [GOV-004].")
+        .check(allModuleClasses);
   }
 
   @Test
   @DisplayName(
       "[GOV-004] No classes in any production module should access standard streams (System.out/System.err)")
   void noStandardStreamsInAllModules() {
-    assertDoesNotThrow(
-        () -> {
-          com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS
-              .because("Use SLF4J loggers instead of standard output/error streams")
-              .check(allModuleClasses);
-        });
+    com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS
+        .because("Use SLF4J loggers instead of standard output/error streams")
+        .check(allModuleClasses);
   }
 
   @Test
