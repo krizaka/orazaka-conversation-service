@@ -24,7 +24,7 @@ public record ChatStreamRequest(
     String pipelineId) {
   public ChatStreamRequest {
     Objects.requireNonNull(prompt, "prompt must not be null");
-    assetIds = (assetIds != null) ? List.copyOf(assetIds) : List.of();
-    pipelineId = (pipelineId != null && !pipelineId.isBlank()) ? pipelineId : "default";
+    assetIds = assetIds != null ? List.copyOf(assetIds) : List.of();
+    pipelineId = pipelineId != null && !pipelineId.isBlank() ? pipelineId : "default";
   }
 }

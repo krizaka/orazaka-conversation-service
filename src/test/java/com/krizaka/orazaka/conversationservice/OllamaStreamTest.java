@@ -23,7 +23,7 @@ class OllamaStreamTest {
   @Autowired private ChatModel chatModel;
 
   @Test
-  void testOllamaStreamingWithOptions() {
+  void ollamaStreamingWithOptions() {
     org.junit.jupiter.api.Assertions.assertNotNull(chatModel);
     log.info(">>> STARTING OLLAMA STREAM OPTIONS TEST <<<");
 

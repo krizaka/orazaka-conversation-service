@@ -72,7 +72,7 @@ public class CodeController {
           try {
             Context context = contextService.resolve(user, null);
             String model =
-                (requestPayload.model() != null && !requestPayload.model().isBlank())
+                requestPayload.model() != null && !requestPayload.model().isBlank()
                     ? requestPayload.model()
                     : DEFAULT_CODE_MODEL;
             Map<String, Object> settings = Map.of("provider", "ollama", "model", model);

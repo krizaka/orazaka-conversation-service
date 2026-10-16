@@ -2,6 +2,7 @@ package com.krizaka.orazaka.conversationservice.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.krizaka.orazaka.test.architecture.ConfigBindingRules;
@@ -60,31 +61,40 @@ class RouterGovernanceTest {
   @Test
   @DisplayName("[DOOR-001] no inbound HTTP entry dispatches a job")
   void noInboundEntryDispatchesAJob() {
-    RunSurfaceRules.assertNoInboundEntryDispatchesAJob();
+    assertDoesNotThrow(
+        () -> {
+          RunSurfaceRules.assertNoInboundEntryDispatchesAJob();
+        });
   }
 
   @Test
   @DisplayName("[GOV-001] No anonymous classes in router (framework exempt)")
   void noAnonymousClassesInProduction() {
-    classes()
-        .that()
-        .resideInAPackage("com.krizaka.orazaka.conversationservice..")
-        .should()
-        .notBeAnonymousClasses()
-        .orShould(beFrameworkAnonymousClass())
-        .because(
-            "Anonymous classes are banned in production — use explicit named implementations"
-                + " or lambda expressions. Framework-required patterns are exempt.")
-        .check(routerClasses);
+    assertDoesNotThrow(
+        () -> {
+          classes()
+              .that()
+              .resideInAPackage("com.krizaka.orazaka.conversationservice..")
+              .should()
+              .notBeAnonymousClasses()
+              .orShould(beFrameworkAnonymousClass())
+              .because(
+                  "Anonymous classes are banned in production — use explicit named implementations"
+                      + " or lambda expressions. Framework-required patterns are exempt.")
+              .check(routerClasses);
+        });
   }
 
   @Test
   @DisplayName(
       "[GOV-004] No classes in router production should access standard streams (System.out/System.err)")
   void noStandardStreams() {
-    com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS
-        .because("Use SLF4J loggers instead of standard output/error streams")
-        .check(routerClasses);
+    assertDoesNotThrow(
+        () -> {
+          com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS
+              .because("Use SLF4J loggers instead of standard output/error streams")
+              .check(routerClasses);
+        });
   }
 
   @Test
@@ -130,55 +140,64 @@ class RouterGovernanceTest {
   @Test
   @DisplayName("[ERR-129] application/service holds only *Service")
   void applicationServiceNamingConvention() {
-    classes()
-        .that()
-        .resideInAPackage("com.krizaka.orazaka.conversationservice.application.service..")
-        .and()
-        .areTopLevelClasses()
-        .should()
-        .haveSimpleNameEndingWith("Service")
-        .because(
-            "application/service holds only application *Service (capability-oriented, never"
-                + " pattern-named *Orchestrator/*Evaluator/*Manager/*Resolver, and not a *Mapper —"
-                + " mapping belongs with the code it maps for). Outbound-port impls (*Adapter)"
-                + " belong in infrastructure/adapter, config (*Properties) in infrastructure/config"
-                + " [ERR-129].")
-        .check(routerClasses);
+    assertDoesNotThrow(
+        () -> {
+          classes()
+              .that()
+              .resideInAPackage("com.krizaka.orazaka.conversationservice.application.service..")
+              .and()
+              .areTopLevelClasses()
+              .should()
+              .haveSimpleNameEndingWith("Service")
+              .because(
+                  "application/service holds only application *Service (capability-oriented, never"
+                      + " pattern-named *Orchestrator/*Evaluator/*Manager/*Resolver, and not a *Mapper —"
+                      + " mapping belongs with the code it maps for). Outbound-port impls (*Adapter)"
+                      + " belong in infrastructure/adapter, config (*Properties) in infrastructure/config"
+                      + " [ERR-129].")
+              .check(routerClasses);
+        });
   }
 
   @Test
   @DisplayName("[ERR-130] domain holds no transport DTOs (*Request/*Response)")
   void domainHasNoTransportDtos() {
-    noClasses()
-        .that()
-        .resideInAPackage("com.krizaka.orazaka.conversationservice.domain..")
-        .should()
-        .haveSimpleNameEndingWith("Request")
-        .orShould()
-        .haveSimpleNameEndingWith("Response")
-        .because(
-            "Transport DTOs (*Request/*Response) belong in the adapter dto packs"
-                + " (adapter/rest/dto, adapter/amqp/dto), never in domain [ERR-130].")
-        .check(routerClasses);
+    assertDoesNotThrow(
+        () -> {
+          noClasses()
+              .that()
+              .resideInAPackage("com.krizaka.orazaka.conversationservice.domain..")
+              .should()
+              .haveSimpleNameEndingWith("Request")
+              .orShould()
+              .haveSimpleNameEndingWith("Response")
+              .because(
+                  "Transport DTOs (*Request/*Response) belong in the adapter dto packs"
+                      + " (adapter/rest/dto, adapter/amqp/dto), never in domain [ERR-130].")
+              .check(routerClasses);
+        });
   }
 
   @Test
   @DisplayName("[ERR-130] adapter/persistence holds only *Adapter/*Mapper")
   void persistenceAdapterNaming() {
-    classes()
-        .that()
-        .resideInAPackage(
-            "com.krizaka.orazaka.conversationservice.infrastructure.adapter.persistence..")
-        .and()
-        .areTopLevelClasses()
-        .should()
-        .haveSimpleNameEndingWith("Adapter")
-        .orShould()
-        .haveSimpleNameEndingWith("Mapper")
-        .because(
-            "infrastructure/adapter/persistence holds outbound-port adapters (*Adapter) and their"
-                + " mappers (*Mapper) only — one package, one component kind [ERR-130].")
-        .check(routerClasses);
+    assertDoesNotThrow(
+        () -> {
+          classes()
+              .that()
+              .resideInAPackage(
+                  "com.krizaka.orazaka.conversationservice.infrastructure.adapter.persistence..")
+              .and()
+              .areTopLevelClasses()
+              .should()
+              .haveSimpleNameEndingWith("Adapter")
+              .orShould()
+              .haveSimpleNameEndingWith("Mapper")
+              .because(
+                  "infrastructure/adapter/persistence holds outbound-port adapters (*Adapter) and their"
+                      + " mappers (*Mapper) only — one package, one component kind [ERR-130].")
+              .check(routerClasses);
+        });
   }
 
   private static ArchCondition<com.tngtech.archunit.core.domain.JavaClass>
@@ -218,64 +237,94 @@ class RouterGovernanceTest {
   @Test
   @DisplayName("[ADR-035] no SecurityConfig opens /internal/** or /uploads/**")
   void internalAndMediaSurfacesStayAuthenticated() {
-    GovernanceRules.assertNoPermitAllOnInternalOrUploads(
-        Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoPermitAllOnInternalOrUploads(
+              Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+        });
   }
 
   @Test
   @DisplayName("[ADR-035] /internal/v1 demands the SERVICE authority, not merely authentication")
   void internalSurfaceDemandsServiceAuthority() {
-    GovernanceRules.assertInternalSurfaceRequiresServiceAuthority(
-        Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertInternalSurfaceRequiresServiceAuthority(
+              Path.of(System.getProperty("user.dir"), "src", "main", "java"));
+        });
   }
 
   @Test
   @DisplayName("[AGENTS.md §4] requests run on virtual threads")
   void requestsRunOnVirtualThreads() {
-    GovernanceRules.assertVirtualThreadsEnabled(Path.of(System.getProperty("user.dir")));
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertVirtualThreadsEnabled(Path.of(System.getProperty("user.dir")));
+        });
   }
 
   @Test
   @DisplayName("[PACK-002] no pack, studio or pack-capability key is a literal in engine code")
   void noPackKeyLiteralsInEngineCode() {
-    GovernanceRules.assertNoPackKeyLiterals(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoPackKeyLiterals(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[PACK-003] engine code never branches on a pack identifier")
   void noPackKeyConditionalsInEngineCode() {
-    GovernanceRules.assertNoPackKeyConditionals(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertNoPackKeyConditionals(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[EXEC-001] every in-process capability's handler_key has an executor")
   void everyCapabilityHasAnExecutor() {
-    GovernanceRules.assertEveryCapabilityHasAnExecutor(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertEveryCapabilityHasAnExecutor(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName("[EXEC-002] every capability's routing_key is drained by a declared worker")
   void everyCapabilityIsDrained() {
-    GovernanceRules.assertEveryCapabilityIsDrained(REPOSITORY_ROOT);
+    assertDoesNotThrow(
+        () -> {
+          GovernanceRules.assertEveryCapabilityIsDrained(REPOSITORY_ROOT);
+        });
   }
 
   @Test
   @DisplayName(
       "[CFG-001] every type the configuration binder builds has a constructor it can choose")
   void configurationBindsUnambiguously() {
-    ConfigBindingRules.assertConfigurationBindsUnambiguously();
-    ConfigBindingRules.assertInjectableComponentsHaveOneConstructor();
+    assertDoesNotThrow(
+        () -> {
+          ConfigBindingRules.assertConfigurationBindsUnambiguously();
+          ConfigBindingRules.assertInjectableComponentsHaveOneConstructor();
+        });
   }
 
   @Test
   @DisplayName("[ERR-113] No Environment injection in production beans")
   void noEnvironmentInjection() {
-    SourceFileScanner.assertNoEnvironmentInjection(Path.of("src", "main", "java"));
+    assertDoesNotThrow(
+        () -> {
+          SourceFileScanner.assertNoEnvironmentInjection(Path.of("src", "main", "java"));
+        });
   }
 
   /** [LOG-001] no logging call takes a prompt, a response body or a message text (ADR-064). */
   @Test
   void noLoggingCallTakesContent() {
-    LoggedContentRules.assertNoLoggingCallTakesContent();
+    assertDoesNotThrow(
+        () -> {
+          LoggedContentRules.assertNoLoggingCallTakesContent();
+        });
   }
 }

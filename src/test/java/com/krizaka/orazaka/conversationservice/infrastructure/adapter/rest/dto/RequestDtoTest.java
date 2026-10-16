@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class RequestDtoTest {
 
   @Test
-  void testCodeGenerationRequest() {
+  void codeGenerationRequest() {
     CodeGenerationRequest req = new CodeGenerationRequest("generate a website", "gpt-4");
     assertEquals("generate a website", req.prompt());
     assertEquals("gpt-4", req.model());
@@ -22,7 +22,7 @@ class RequestDtoTest {
   }
 
   @Test
-  void testUploadAssetResponse() {
+  void uploadAssetResponse() {
     UUID assetId = UUID.randomUUID();
     UploadAssetResponse resp = new UploadAssetResponse(assetId, "file.mp4", "video/mp4", 1024L);
     assertEquals(assetId, resp.assetId());
@@ -39,7 +39,7 @@ class RequestDtoTest {
   }
 
   @Test
-  void testChatStreamRequest() {
+  void chatStreamRequest() {
     ChatStreamRequest req =
         new ChatStreamRequest("hello", List.of("1"), "model", 10, 30, 20, "pipeline");
     assertEquals("hello", req.prompt());

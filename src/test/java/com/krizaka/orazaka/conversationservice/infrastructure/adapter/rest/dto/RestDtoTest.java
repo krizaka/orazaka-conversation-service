@@ -10,7 +10,7 @@ class RestDtoTest {
 
   @Test
   @DisplayName("FeatureResponse carries a capability's identity and its live availability")
-  void testFeatureResponse() {
+  void featureResponse() {
     // It carried label, icon, uriPath, httpMethod and payloadTemplate, and REQUIRED the last three
     // non-null — which is why GET /api/v1/features answered 500 for any deployment with a
     // pack-contributed capability, whose uri_path is NULL (ADR-069 §5). What the endpoint answers
@@ -30,7 +30,7 @@ class RestDtoTest {
 
   @Test
   @DisplayName("ImageGenerationRequest validates blank constraints in constructor")
-  void testImageGenerationRequest() {
+  void imageGenerationRequest() {
     ImageGenerationRequest valid = new ImageGenerationRequest("Generate poster", "dall-e-3");
     assertEquals("Generate poster", valid.prompt());
     assertEquals("dall-e-3", valid.model());
@@ -41,7 +41,7 @@ class RestDtoTest {
 
   @Test
   @DisplayName("SpeechRequest validates blank constraints in constructor")
-  void testTtsRequest() {
+  void ttsRequest() {
     SpeechRequest valid = new SpeechRequest("Hello world", "tts-1", "alloy");
     assertEquals("Hello world", valid.text());
     assertEquals("tts-1", valid.model());
