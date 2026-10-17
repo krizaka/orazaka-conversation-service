@@ -3,6 +3,7 @@ package com.krizaka.orazaka.conversationservice.application.service;
 import com.krizaka.orazaka.persistence.domain.event.JobStatusChangedEvent;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -121,6 +122,20 @@ public class JobStreamService {
    * @param progress The progress percentage.
    */
   public void broadcastProgress(String jobId, String userId, int progress) {
+    broadcastProgress(jobId, userId, progress, Map.of());
+  }
+
+  /**
+   * Broadcasts job progress with what the executor said it is doing (orazaka-web-client#85).
+   *
+   * @param jobId The job ID.
+   * @param userId The user ID.
+   * @param progress The progress percentage.
+   * @param detail {@code phase} (loading, generating, encoding, uploading) and {@code step}/{@code
+   *     steps} when the executor knows them; empty otherwise.
+   */
+  public void broadcastProgress(
+      String jobId, String userId, int progress, Map<String, Object> detail) {
     var userEmitters = emitters.get(userId);
     if (userEmitters == null || userEmitters.isEmpty()) {
       return;
@@ -128,7 +143,9 @@ public class JobStreamService {
 
     logger.debug(
         "Broadcasting job progress to user {}: Job ID={}, Progress={}%", userId, jobId, progress);
-    Map<String, Object> payload = Map.of("jobId", jobId, "progress", progress);
+    Map<String, Object> payload = new HashMap<>(detail);
+    payload.put("jobId", jobId);
+    payload.put("progress", progress);
 
     for (SseEmitter emitter : userEmitters) {
       try {

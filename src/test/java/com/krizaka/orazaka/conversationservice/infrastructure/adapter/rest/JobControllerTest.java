@@ -3,6 +3,7 @@ package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.krizaka.orazaka.conversationservice.application.service.JobDeletionService;
 import com.krizaka.orazaka.conversationservice.application.service.JobQueuePublisherService;
 import com.krizaka.orazaka.conversationservice.application.service.JobStreamService;
 import com.krizaka.orazaka.core.domain.model.job.JobInfo;
@@ -40,6 +41,7 @@ class JobControllerTest {
   private JobService jobService;
   private JobQueuePublisherService jobQueuePublisher;
   private JobStreamService jobStreamService;
+  private JobDeletionService jobDeletionService;
   private ChatSessionService chatSessionService;
   private ObjectProvider<StatefulRedisConnection<String, byte[]>> redisConnectionProvider;
   private StatefulRedisConnection<String, byte[]> redisConnection;
@@ -52,6 +54,7 @@ class JobControllerTest {
     jobService = mock(JobService.class);
     jobQueuePublisher = mock(JobQueuePublisherService.class);
     jobStreamService = mock(JobStreamService.class);
+    jobDeletionService = mock(JobDeletionService.class);
     chatSessionService = mock(ChatSessionService.class);
     redisConnectionProvider = mock(ObjectProvider.class);
     redisConnection = mock(StatefulRedisConnection.class);
@@ -61,6 +64,7 @@ class JobControllerTest {
             jobService,
             jobQueuePublisher,
             jobStreamService,
+            jobDeletionService,
             chatSessionService,
             redisConnectionProvider);
   }
@@ -379,5 +383,26 @@ class JobControllerTest {
 
     assertEquals(HttpStatus.OK, jobController.approveJob("job-x", alice).getStatusCode());
     verify(jobQueuePublisher).publishApproval("job-x", alice.id().toString());
+  }
+
+  @Test
+  void deleteJob_delegatesWithTheCallerAndAnswers204() {
+    UUID userId = UUID.randomUUID();
+    User user = new User(userId, "u", "u@test.class", true, Set.of("ROLE_USER"), Map.of());
+
+    ResponseEntity<Void> response = jobController.deleteJob("job-7", user);
+
+    assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    verify(jobDeletionService).delete("job-7", userId.toString(), false);
+  }
+
+  @Test
+  void deleteJob_asAdminSaysSo() {
+    UUID adminId = UUID.randomUUID();
+    User admin = new User(adminId, "a", "a@test.class", true, Set.of("ROLE_ADMIN"), Map.of());
+
+    jobController.deleteJob("job-8", admin);
+
+    verify(jobDeletionService).delete("job-8", adminId.toString(), true);
   }
 }

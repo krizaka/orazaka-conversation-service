@@ -3,8 +3,10 @@ package com.krizaka.orazaka.conversationservice.infrastructure.adapter.amqp;
 import com.krizaka.orazaka.conversationservice.application.service.JobStreamService;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
 import com.krizaka.orazaka.persistence.infrastructure.config.MessagingContract;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -58,13 +60,18 @@ public class JobEventListener {
     if (routingKey.endsWith(MessagingContract.JOB_EVENT_PROGRESS_SUFFIX)) {
       int progress = message.get("progress") instanceof Number n ? n.intValue() : 0;
       logger.debug("Received AMQP progress update for job ID: {}, progress: {}%", jobId, progress);
+      Map<String, Object> detail = progressDetail(message);
       jobPersistenceProvider
           .getJob(jobId)
-          .ifPresent(job -> jobStreamService.broadcastProgress(jobId, job.userId(), progress));
+          .ifPresent(
+              job -> jobStreamService.broadcastProgress(jobId, job.userId(), progress, detail));
       return;
     }
 
-    boolean terminal = routingKey.endsWith(".done") || routingKey.endsWith(".error");
+    boolean terminal =
+        routingKey.endsWith(".done")
+            || routingKey.endsWith(".error")
+            || routingKey.endsWith(".cancelled");
     if (terminal && jobPersistenceProvider.getJob(jobId).isEmpty()) {
       // A protected job's row is purged once it is terminal (ADR-065), and this relay can hear the
       // outcome after the purge. Updating a row that is gone throws, and a thrown event is retried
@@ -83,6 +90,19 @@ public class JobEventListener {
       return;
     }
 
+    if (routingKey.endsWith(".cancelled")) {
+      // Its owner stopped it: not a failure, never billed. A row already deleted stays deleted.
+      logger.info("Job {} was cancelled by its owner", jobId);
+      jobPersistenceProvider
+          .getJob(jobId)
+          .filter(job -> !"DELETED".equals(job.status()))
+          .ifPresent(
+              job ->
+                  jobPersistenceProvider.updateJobStatus(
+                      jobId, "CANCELLED", null, "CANCELLED_BY_OWNER"));
+      return;
+    }
+
     if (routingKey.endsWith(".error")) {
       String error = message.get("error") instanceof String s ? s : "Worker reported failure";
       logger.warn("Job {} failed in its owning worker: {}", jobId, error);
@@ -91,5 +111,22 @@ public class JobEventListener {
     }
 
     logger.debug("Ignoring job event with unhandled routing key: {}", routingKey);
+  }
+
+  /** The phase and step an executor reported, when it reported them and they are well-formed. */
+  static Map<String, Object> progressDetail(Map<String, Object> message) {
+    Map<String, Object> detail = new HashMap<>();
+    if (message.get("phase") instanceof String phase
+        && Set.of("queued", "loading", "generating", "encoding", "uploading").contains(phase)) {
+      detail.put("phase", phase);
+    }
+    if (message.get("step") instanceof Number step
+        && message.get("steps") instanceof Number total) {
+      if (total.intValue() > 0 && step.intValue() >= 0) {
+        detail.put("step", step.intValue());
+        detail.put("steps", total.intValue());
+      }
+    }
+    return detail;
   }
 }

@@ -1,5 +1,6 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.orazaka.conversationservice.application.service.JobDeletionService;
 import com.krizaka.orazaka.conversationservice.application.service.JobQueuePublisherService;
 import com.krizaka.orazaka.conversationservice.application.service.JobStreamService;
 import com.krizaka.orazaka.core.domain.model.job.JobInfo;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +53,7 @@ public class JobController {
   private final JobService jobService;
   private final JobQueuePublisherService jobQueuePublisher;
   private final JobStreamService jobStreamService;
+  private final JobDeletionService jobDeletionService;
   private final ChatSessionService chatSessionService;
   private final ObjectProvider<StatefulRedisConnection<String, byte[]>> redisConnectionProvider;
 
@@ -58,6 +61,7 @@ public class JobController {
       JobService jobService,
       JobQueuePublisherService jobQueuePublisher,
       JobStreamService jobStreamService,
+      JobDeletionService jobDeletionService,
       ChatSessionService chatSessionService,
       ObjectProvider<StatefulRedisConnection<String, byte[]>> redisConnectionProvider) {
     this.jobService = Objects.requireNonNull(jobService, "JobService cannot be null");
@@ -65,6 +69,8 @@ public class JobController {
         Objects.requireNonNull(jobQueuePublisher, "JobQueuePublisherService cannot be null");
     this.jobStreamService =
         Objects.requireNonNull(jobStreamService, "JobStreamService cannot be null");
+    this.jobDeletionService =
+        Objects.requireNonNull(jobDeletionService, "JobDeletionService cannot be null");
     this.chatSessionService =
         Objects.requireNonNull(chatSessionService, "ChatSessionService cannot be null");
     this.redisConnectionProvider =
@@ -131,6 +137,17 @@ public class JobController {
                 user.authorities().contains("ROLE_ADMIN")
                     || user.id().toString().equals(job.userId()))
         .orElseThrow(() -> new NotFoundException(JOB_NOT_FOUND, "No job " + id + "."));
+  }
+
+  /**
+   * Deletes a finished job's result: files out of every store, row marked deleted
+   * (orazaka-web-client#86). Owner only (404 for anyone else); an admin may delete for a user.
+   */
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deleteJob(
+      @PathVariable String id, @AuthenticationPrincipal User user) {
+    jobDeletionService.delete(id, user.id().toString(), user.authorities().contains("ROLE_ADMIN"));
+    return ResponseEntity.noContent().build();
   }
 
   /** Registers a Server-Sent Events stream for real-time job status notifications. */
