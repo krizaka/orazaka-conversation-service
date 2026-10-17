@@ -19,7 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,8 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * The two things left on the {@code media} resource once door 1 closed: uploading an asset, and
- * searching the semantic index (ADR-068 §5).
+ * The three things left on the {@code media} resource once door 1 closed: uploading an asset,
+ * deleting one's own upload, and searching the semantic index (ADR-068 §5).
  *
  * <p><b>What went, and why these two stayed.</b> {@code /analyze/image}, {@code /analyze/audio} and
  * {@code /analyze/video} each submitted a job straight to the job plane — a capability invocation
@@ -144,6 +146,47 @@ public class MediaAnalysisController {
       logger.error("Failed to write uploaded file to persistent storage", e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body("Failed to store asset payload");
+    }
+  }
+
+  /**
+   * Deletes one of the caller's own uploads (the sealed file in {@code <uploads>/<user>/temp}).
+   *
+   * <p>A product that sends a person's photo only to have it read once — a profile-photo check —
+   * must be able to take it back the moment the answer is in; the retention sweep cannot do that
+   * for an upload that belongs to no run. Only the caller's own directory is looked in, so another
+   * account's asset id is a 404, exactly like an unknown one.
+   */
+  @DeleteMapping("/assets/{assetId}")
+  public ResponseEntity<@NotNull Void> deleteAsset(
+      @PathVariable("assetId") UUID assetId, @AuthenticationPrincipal User user) {
+    if (user == null || user.id() == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    try {
+      Path basePath = Path.of(uploadDir).toRealPath();
+      Path temp = basePath.resolve(UUID.fromString(user.id().toString()).toString()).resolve("temp").normalize();
+      if (!temp.startsWith(basePath) || !Files.isDirectory(temp)) {
+        return ResponseEntity.notFound().build();
+      }
+      boolean deleted = false;
+      try (var files = Files.list(temp)) {
+        for (Path file : (Iterable<Path>) files::iterator) {
+          String name = file.getFileName().toString();
+          if (name.equals(assetId.toString()) || name.startsWith(assetId + ".")) {
+            Files.delete(file);
+            deleted = true;
+          }
+        }
+      }
+      if (!deleted) {
+        return ResponseEntity.notFound().build();
+      }
+      logger.info("Deleted uploaded asset with id: {}", assetId);
+      return ResponseEntity.noContent().build();
+    } catch (IOException e) {
+      logger.error("Failed to delete an uploaded asset", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
   }
 
