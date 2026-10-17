@@ -37,7 +37,8 @@ class MediaAnalysisControllerTest {
 
   @BeforeEach
   void setUp() {
-    controller = controllerWith(new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore());
+    controller =
+        controllerWith(new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore());
   }
 
   private MediaAnalysisController controllerWith(
@@ -67,7 +68,8 @@ class MediaAnalysisControllerTest {
     try (var files = Files.list(uploads)) {
       var kept = files.toList();
       org.junit.jupiter.api.Assertions.assertEquals(1, kept.size());
-      org.junit.jupiter.api.Assertions.assertTrue(kept.get(0).getFileName().toString().endsWith(".png"));
+      org.junit.jupiter.api.Assertions.assertTrue(
+          kept.get(0).getFileName().toString().endsWith(".png"));
       org.junit.jupiter.api.Assertions.assertTrue(
           testAssets().isEncrypted(kept.get(0)), "only sealed bytes leave the disk");
     }
@@ -94,7 +96,8 @@ class MediaAnalysisControllerTest {
     MultipartFile file =
         new MockMultipartFile("file", "photo.png", "image/png", "fake-png-data".getBytes());
 
-    ResponseEntity<Object> response = controllerWith(broken).upload(file, null, user(UUID.randomUUID()));
+    ResponseEntity<Object> response =
+        controllerWith(broken).upload(file, null, user(UUID.randomUUID()));
 
     assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
   }

@@ -32,9 +32,10 @@ class JobReconciliationServiceTest {
   private final com.krizaka.orazaka.assets.application.service.EncryptedAssetService assets =
       testAssets();
 
-  private static final com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties LOCAL =
-      new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
-          "local", null, null, "storage.bunnycdn.com", null, "acme");
+  private static final com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties
+      LOCAL =
+          new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+              "local", null, null, "storage.bunnycdn.com", null, "acme");
 
   private JobReconciliationService service;
 

@@ -3,8 +3,8 @@ package com.krizaka.orazaka.conversationservice.application.service;
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
 import com.krizaka.orazaka.assets.domain.port.AssetKeys;
 import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
-import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.assets.infrastructure.config.AssetEncryptionProperties;
+import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.conversationservice.infrastructure.config.RouterProperties;
 import com.krizaka.orazaka.conversationservice.infrastructure.support.PathResolver;
 import com.krizaka.orazaka.persistence.domain.model.JobDto;
@@ -135,7 +135,8 @@ public class JobReconciliationService {
       return durableAssetStore.fetch(
           AssetKeys.jobFile(storage.tenant(), job.userId(), job.id(), "result.json"), resultPath);
     } catch (IOException | IllegalArgumentException e) {
-      logger.warn("Durable store could not restore the result of job {}: {}", job.id(), e.getMessage());
+      logger.warn(
+          "Durable store could not restore the result of job {}: {}", job.id(), e.getMessage());
       return false;
     }
   }
