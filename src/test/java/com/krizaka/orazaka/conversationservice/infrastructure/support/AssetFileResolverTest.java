@@ -50,6 +50,18 @@ class AssetFileResolverTest {
   }
 
   @Test
+  void actorIdCannotClimbOutOfTheUploadRoot() throws IOException {
+    Path uploadDir = Files.createDirectories(tempDir.resolve("uploads"));
+    Path outside = Files.createDirectories(tempDir.resolve("outside").resolve("temp"));
+    Files.writeString(outside.resolve("asset-secret.png"), "not yours");
+
+    assertThat(AssetFileResolver.resolve(uploadDir.toString(), "../outside", "asset-secret"))
+        .isEmpty();
+    assertThat(AssetFileResolver.resolve(uploadDir.toString(), "a/../../outside", "asset-secret"))
+        .isEmpty();
+  }
+
+  @Test
   void resolveNotFound() throws IOException {
     Path uploadDir = tempDir.resolve("uploads");
     Path userDir = uploadDir.resolve("user123");
