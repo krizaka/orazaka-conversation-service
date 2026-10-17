@@ -23,8 +23,8 @@ public final class AssetFileResolver {
   /** The user id names one directory under the upload root: no separator, no {@code ..}, no NUL. */
   private static boolean isSingleSegment(String userId) {
     return !userId.isBlank()
-        && !userId.equals(".")
-        && !userId.equals("..")
+        && !".".equals(userId)
+        && !"..".equals(userId)
         && userId.indexOf('/') < 0
         && userId.indexOf('\\') < 0
         && userId.indexOf('\0') < 0;
