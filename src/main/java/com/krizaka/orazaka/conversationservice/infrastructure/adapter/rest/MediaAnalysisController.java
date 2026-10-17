@@ -1,6 +1,9 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
+import com.krizaka.orazaka.assets.domain.port.AssetKeys;
+import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
+import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest.dto.UploadAssetResponse;
 import com.krizaka.orazaka.conversationservice.infrastructure.support.PathResolver;
 import com.krizaka.orazaka.core.domain.ports.outbound.KnowledgeService;
@@ -52,11 +55,17 @@ public class MediaAnalysisController {
   private final KnowledgeService knowledgeService;
   private final String uploadDir;
   private final EncryptedAssetService encryptedAssetService;
+  private final DurableAssetStore durableAssetStore;
+  private final MediaStorageProperties storage;
 
   public MediaAnalysisController(
       KnowledgeService knowledgeService,
       @Value("${spring.servlet.multipart.location:var/orazaka-uploads}") String uploadDirProperty,
-      EncryptedAssetService encryptedAssetService) {
+      EncryptedAssetService encryptedAssetService,
+      DurableAssetStore durableAssetStore,
+      MediaStorageProperties storage) {
+    this.durableAssetStore = durableAssetStore;
+    this.storage = storage;
     this.knowledgeService = knowledgeService;
     this.uploadDir = PathResolver.resolveToString(uploadDirProperty);
     this.encryptedAssetService = encryptedAssetService;
@@ -131,6 +140,11 @@ public class MediaAnalysisController {
       // there is no window in which the plaintext exists at the destination (ADR-054).
       try (InputStream source = file.getInputStream()) {
         encryptedAssetService.write(targetPath, source, file.getSize());
+      }
+      if (durableAssetStore.enabled()) {
+        // The sealed envelope, under the uploader's own prefix. An upload reported stored here and
+        // gone at the next deploy is the bug this prevents: a failed copy is a failed upload.
+        durableAssetStore.put(AssetKeys.uploadFile(storage.tenant(), userId, safeName), targetPath);
       }
       // Log only non-user-controlled identifiers (Sonar S5145)
       logger.info("Successfully stored uploaded asset with id: {}", assetId);
