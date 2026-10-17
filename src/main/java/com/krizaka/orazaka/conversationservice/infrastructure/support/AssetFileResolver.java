@@ -20,6 +20,16 @@ public final class AssetFileResolver {
 
   private AssetFileResolver() {}
 
+  /** The user id names one directory under the upload root: no separator, no {@code ..}, no NUL. */
+  private static boolean isSingleSegment(String userId) {
+    return !userId.isBlank()
+        && !userId.equals(".")
+        && !userId.equals("..")
+        && userId.indexOf('/') < 0
+        && userId.indexOf('\\') < 0
+        && userId.indexOf('\0') < 0;
+  }
+
   /**
    * Resolves a file by its asset ID prefix from the user's upload directory hierarchy.
    *
@@ -30,6 +40,9 @@ public final class AssetFileResolver {
    */
   public static Optional<File> resolve(String uploadDir, String userId, Object assetId) {
     String prefix = assetId.toString();
+    if (userId == null || !isSingleSegment(userId)) {
+      return Optional.empty();
+    }
     File userDir = new File(uploadDir, userId);
 
     // Priority 1: temp directory
