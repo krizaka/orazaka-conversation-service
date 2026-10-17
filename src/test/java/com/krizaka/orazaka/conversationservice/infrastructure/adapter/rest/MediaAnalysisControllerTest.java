@@ -110,6 +110,63 @@ class MediaAnalysisControllerTest {
     }
   }
 
+  @Test
+  void deleteAsset_removesTheCallersOwnUpload() throws Exception {
+    UUID userId = UUID.randomUUID();
+    Files.createDirectories(tempDir.toRealPath());
+    UploadAssetResponse uploaded =
+        (UploadAssetResponse)
+            controller
+                .upload(
+                    new MockMultipartFile("file", "p.jpg", "image/jpeg", "face-bytes".getBytes()),
+                    null,
+                    user(userId))
+                .getBody();
+
+    ResponseEntity<Void> response = controller.deleteAsset(uploaded.assetId(), user(userId));
+
+    assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    try (var left = Files.list(tempDir.resolve(userId.toString()).resolve("temp"))) {
+      assertEquals(0, left.count(), "the sealed bytes are gone from the disk");
+    }
+  }
+
+  @Test
+  void deleteAsset_ofSomeoneElse_isNotFoundAndKeepsTheFile() throws Exception {
+    UUID owner = UUID.randomUUID();
+    Files.createDirectories(tempDir.toRealPath());
+    UploadAssetResponse uploaded =
+        (UploadAssetResponse)
+            controller
+                .upload(
+                    new MockMultipartFile("file", "p.jpg", "image/jpeg", "face-bytes".getBytes()),
+                    null,
+                    user(owner))
+                .getBody();
+
+    ResponseEntity<Void> response =
+        controller.deleteAsset(uploaded.assetId(), user(UUID.randomUUID()));
+
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    try (var left = Files.list(tempDir.resolve(owner.toString()).resolve("temp"))) {
+      assertEquals(1, left.count());
+    }
+  }
+
+  @Test
+  void deleteAsset_unknownOrAlreadyDeleted_isNotFound() throws Exception {
+    Files.createDirectories(tempDir.toRealPath());
+    assertEquals(
+        HttpStatus.NOT_FOUND,
+        controller.deleteAsset(UUID.randomUUID(), user(UUID.randomUUID())).getStatusCode());
+  }
+
+  @Test
+  void deleteAsset_withoutUser_isUnauthorized() {
+    assertEquals(
+        HttpStatus.UNAUTHORIZED, controller.deleteAsset(UUID.randomUUID(), null).getStatusCode());
+  }
+
   /** A real store over a throwaway keyring: tests exercise the format, never a stub of it. */
   static com.krizaka.orazaka.assets.application.service.EncryptedAssetService testAssets() {
     try {
