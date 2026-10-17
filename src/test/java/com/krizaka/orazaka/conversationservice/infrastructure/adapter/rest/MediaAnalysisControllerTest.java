@@ -144,7 +144,8 @@ class MediaAnalysisControllerTest {
                     user(owner))
                 .getBody();
 
-    ResponseEntity<Void> response = controller.deleteAsset(uploaded.assetId(), user(UUID.randomUUID()));
+    ResponseEntity<Void> response =
+        controller.deleteAsset(uploaded.assetId(), user(UUID.randomUUID()));
 
     assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     try (var left = Files.list(tempDir.resolve(owner.toString()).resolve("temp"))) {
