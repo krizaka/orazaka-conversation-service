@@ -52,6 +52,12 @@
             <groupId>com.krizaka</groupId>
             <artifactId>krizaka-spring-boot-starter-observability</artifactId>
         </dependency>
+        <!-- App version compatibility: GET /api/v1/app-config, 426 Upgrade Required below the minimum,
+             N-1 contracts, and the audited admin API — every value a database parameter. -->
+        <dependency>
+            <groupId>com.krizaka</groupId>
+            <artifactId>krizaka-spring-boot-starter-app-config</artifactId>
+        </dependency>
         <!-- The users service's internal API, typed (UserDirectoryClient). -->
         <dependency>
             <groupId>com.krizaka</groupId>

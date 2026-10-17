@@ -13,6 +13,7 @@ krizaka:
   security.jwt.secret: ${IDENTITY_JWT_SECRET:}
   messaging.exchanges: { events: orazaka.events, dead-letter: orazaka.dlx }
   web.cors.allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  app-config.admin.enabled: true  # the operator edits the apps' version parameters (ROLE_ADMIN)
   users.client: { base-url: "${IDENTITY_URL:http://localhost:8083}", service-secret: "${IDENTITY_JWT_SECRET:}", service-name: orazaka-conversation-service }
   billing: { enabled: "${BILLING_ENABLED:false}", base-url: "${BILLING_INTERNAL_URL:http://localhost:8095}", service-secret: "${IDENTITY_JWT_SECRET:}" }
 orazaka:
