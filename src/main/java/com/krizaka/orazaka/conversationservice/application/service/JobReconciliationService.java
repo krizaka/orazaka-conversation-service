@@ -1,6 +1,9 @@
 package com.krizaka.orazaka.conversationservice.application.service;
 
 import com.krizaka.orazaka.assets.application.service.EncryptedAssetService;
+import com.krizaka.orazaka.assets.domain.port.AssetKeys;
+import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
+import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.assets.infrastructure.config.AssetEncryptionProperties;
 import com.krizaka.orazaka.conversationservice.infrastructure.config.RouterProperties;
 import com.krizaka.orazaka.conversationservice.infrastructure.support.PathResolver;
@@ -42,13 +45,20 @@ public class JobReconciliationService {
   private final String uploadDir;
   private final EncryptedAssetService encryptedAssetService;
   private final boolean acceptPlaintext;
+  private final DurableAssetStore durableAssetStore;
+  private final MediaStorageProperties storage;
 
   public JobReconciliationService(
       JobPersistenceProvider jobPersistenceProvider,
       ObjectMapper objectMapper,
       RouterProperties routerProperties,
       EncryptedAssetService encryptedAssetService,
-      AssetEncryptionProperties encryption) {
+      AssetEncryptionProperties encryption,
+      DurableAssetStore durableAssetStore,
+      MediaStorageProperties storage) {
+    this.durableAssetStore =
+        Objects.requireNonNull(durableAssetStore, "DurableAssetStore cannot be null");
+    this.storage = Objects.requireNonNull(storage, "MediaStorageProperties cannot be null");
     this.jobPersistenceProvider =
         Objects.requireNonNull(jobPersistenceProvider, "JobPersistenceProvider cannot be null");
     this.objectMapper = Objects.requireNonNull(objectMapper, "ObjectMapper cannot be null");
@@ -96,7 +106,7 @@ public class JobReconciliationService {
         Path.of(uploadDir, job.userId(), job.id(), "output", "result.json")
             .toAbsolutePath()
             .normalize();
-    if (!Files.isRegularFile(resultPath)) {
+    if (!Files.isRegularFile(resultPath) && !restoreResult(job, resultPath)) {
       return false;
     }
     try {
@@ -112,6 +122,20 @@ public class JobReconciliationService {
       return true;
     } catch (Exception e) {
       logger.error("Failed to reconcile stuck job {} from {}", job.id(), resultPath, e);
+      return false;
+    }
+  }
+
+  /** A redeploy wipes the disk, not the durable store: the sealed result comes back from there. */
+  private boolean restoreResult(JobDto job, Path resultPath) {
+    if (!durableAssetStore.enabled()) {
+      return false;
+    }
+    try {
+      return durableAssetStore.fetch(
+          AssetKeys.jobFile(storage.tenant(), job.userId(), job.id(), "result.json"), resultPath);
+    } catch (IOException | IllegalArgumentException e) {
+      logger.warn("Durable store could not restore the result of job {}: {}", job.id(), e.getMessage());
       return false;
     }
   }

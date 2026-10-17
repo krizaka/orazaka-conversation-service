@@ -32,6 +32,10 @@ class JobReconciliationServiceTest {
   private final com.krizaka.orazaka.assets.application.service.EncryptedAssetService assets =
       testAssets();
 
+  private static final com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties LOCAL =
+      new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+          "local", null, null, "storage.bunnycdn.com", null, "acme");
+
   private JobReconciliationService service;
 
   @BeforeEach
@@ -41,7 +45,13 @@ class JobReconciliationServiceTest {
             new RouterProperties.UploadsConfig(tempDir.toString(), "/uploads/**", 0));
     service =
         new JobReconciliationService(
-            jobPersistenceProvider, new ObjectMapper(), props, assets, testEncryption());
+            jobPersistenceProvider,
+            new ObjectMapper(),
+            props,
+            assets,
+            testEncryption(),
+            new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore(),
+            LOCAL);
   }
 
   private void writeResult(String jobId, String json) throws Exception {
@@ -123,5 +133,35 @@ class JobReconciliationServiceTest {
       testEncryption() {
     return new com.krizaka.orazaka.assets.infrastructure.config.AssetEncryptionProperties(
         true, "unused", 4096, false);
+  }
+
+  @Test
+  void reconcile_afterARedeploy_theResultComesBackFromTheDurableStore() throws Exception {
+    var durable =
+        new com.krizaka.orazaka.assets.infrastructure.storage.DirectoryAssetStore(
+            tempDir.resolve("durable"));
+    // The executor wrote and mirrored the result; the redeploy then wiped the disk.
+    writeResult("job-9", "{\"answer\":\"42\"}");
+    Path written = tempDir.resolve(Path.of(USER_ID, "job-9", "output", "result.json"));
+    durable.put("t/acme/u/" + USER_ID + "/jobs/job-9/result.json", written);
+    Files.delete(written);
+    RouterProperties props =
+        new RouterProperties(
+            new RouterProperties.UploadsConfig(tempDir.toString(), "/uploads/**", 0));
+    var afterRedeploy =
+        new JobReconciliationService(
+            jobPersistenceProvider,
+            new ObjectMapper(),
+            props,
+            assets,
+            testEncryption(),
+            durable,
+            new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+                "directory", null, null, "storage.bunnycdn.com", "x", "acme"));
+    when(jobPersistenceProvider.findJobsByStatuses(any())).thenReturn(List.of(pendingJob("job-9")));
+
+    afterRedeploy.reconcileOnStartup();
+
+    verify(jobPersistenceProvider).updateJobStatus(eq("job-9"), eq("COMPLETED"), any(), isNull());
   }
 }

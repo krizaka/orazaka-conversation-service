@@ -37,7 +37,66 @@ class MediaAnalysisControllerTest {
 
   @BeforeEach
   void setUp() {
-    controller = new MediaAnalysisController(knowledgeService, tempDir.toString(), testAssets());
+    controller = controllerWith(new com.krizaka.orazaka.assets.infrastructure.storage.NoDurableAssetStore());
+  }
+
+  private MediaAnalysisController controllerWith(
+      com.krizaka.orazaka.assets.domain.port.DurableAssetStore durable) {
+    return new MediaAnalysisController(
+        knowledgeService,
+        tempDir.toString(),
+        testAssets(),
+        durable,
+        new com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties(
+            "directory", null, null, "storage.bunnycdn.com", "x", "acme"));
+  }
+
+  @Test
+  void upload_isKeptDurablyAsTheSealedEnvelope_underTheUploadersPrefix() throws Exception {
+    var durable =
+        new com.krizaka.orazaka.assets.infrastructure.storage.DirectoryAssetStore(
+            tempDir.resolve("durable"));
+    UUID userId = UUID.randomUUID();
+    MultipartFile file =
+        new MockMultipartFile("file", "photo.png", "image/png", "fake-png-data".getBytes());
+
+    ResponseEntity<Object> response = controllerWith(durable).upload(file, null, user(userId));
+
+    assertEquals(HttpStatus.CREATED, response.getStatusCode());
+    var uploads = tempDir.resolve("durable/t/acme/u/" + userId + "/jobs/uploads");
+    try (var files = Files.list(uploads)) {
+      var kept = files.toList();
+      org.junit.jupiter.api.Assertions.assertEquals(1, kept.size());
+      org.junit.jupiter.api.Assertions.assertTrue(kept.get(0).getFileName().toString().endsWith(".png"));
+      org.junit.jupiter.api.Assertions.assertTrue(
+          testAssets().isEncrypted(kept.get(0)), "only sealed bytes leave the disk");
+    }
+  }
+
+  @Test
+  void upload_whenTheDurableCopyFails_isNotReportedStored() {
+    var broken =
+        new com.krizaka.orazaka.assets.domain.port.DurableAssetStore() {
+          public boolean enabled() {
+            return true;
+          }
+
+          public void put(String key, Path file) throws java.io.IOException {
+            throw new java.io.IOException("HTTP 401");
+          }
+
+          public boolean fetch(String key, Path target) {
+            return false;
+          }
+
+          public void delete(String key) {}
+        };
+    MultipartFile file =
+        new MockMultipartFile("file", "photo.png", "image/png", "fake-png-data".getBytes());
+
+    ResponseEntity<Object> response = controllerWith(broken).upload(file, null, user(UUID.randomUUID()));
+
+    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
   }
 
   @Test
