@@ -1,6 +1,9 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.amqp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.krizaka.orazaka.conversationservice.application.service.JobStreamService;
@@ -60,7 +63,7 @@ class JobEventListenerTest {
 
     listener.onJobEvent(Map.of("jobId", "job-123", "progress", 45), "job.job-123.progress");
 
-    verify(jobStreamService).broadcastProgress("job-123", "user-456", 45);
+    verify(jobStreamService).broadcastProgress("job-123", "user-456", 45, Map.of());
   }
 
   @Test
@@ -122,5 +125,75 @@ class JobEventListenerTest {
     listener.onJobEvent(Map.of("progress", 10), "job.job-123.progress");
 
     verifyNoInteractions(jobPersistenceProvider, jobStreamService);
+  }
+
+  @Test
+  @DisplayName("A progress event carries the phase and the step n of N to the stream")
+  void onJobEvent_progressWithPhase_relaysThePhase() {
+    when(jobPersistenceProvider.getJob("job-123")).thenReturn(Optional.of(job("job-123")));
+
+    listener.onJobEvent(
+        Map.of("jobId", "job-123", "progress", 40, "phase", "generating", "step", 4, "steps", 10),
+        "job.job-123.progress");
+
+    verify(jobStreamService)
+        .broadcastProgress(
+            "job-123",
+            job("job-123").userId(),
+            40,
+            Map.of("phase", "generating", "step", 4, "steps", 10));
+  }
+
+  @Test
+  @DisplayName("An unknown phase or a nonsense step is dropped, not relayed")
+  void progressDetail_dropsWhatItDoesNotKnow() {
+    assertEquals(
+        Map.of(),
+        JobEventListener.progressDetail(Map.of("phase", "daydreaming", "step", 3, "steps", 0)));
+  }
+
+  @Test
+  @DisplayName("A cancelled event applies CANCELLED, never FAILED")
+  void onJobEvent_cancelledKey_cancelsJob() {
+    when(jobPersistenceProvider.getJob("job-123")).thenReturn(Optional.of(job("job-123")));
+
+    listener.onJobEvent(Map.of("jobId", "job-123"), "job.job-123.cancelled");
+
+    verify(jobPersistenceProvider)
+        .updateJobStatus("job-123", "CANCELLED", null, "CANCELLED_BY_OWNER");
+    verify(jobPersistenceProvider, never())
+        .updateJobStatus(eq("job-123"), eq("FAILED"), any(), any());
+  }
+
+  @Test
+  @DisplayName("A cancelled event never resurrects a deleted job")
+  void onJobEvent_cancelledAfterDelete_leavesItDeleted() {
+    JobDto deleted = job("job-123");
+    deleted =
+        new JobDto(
+            deleted.id(),
+            deleted.userId(),
+            deleted.featureKey(),
+            "DELETED",
+            Map.of(),
+            Map.of(),
+            null,
+            deleted.createdAt(),
+            deleted.updatedAt());
+    when(jobPersistenceProvider.getJob("job-123")).thenReturn(Optional.of(deleted));
+
+    listener.onJobEvent(Map.of("jobId", "job-123"), "job.job-123.cancelled");
+
+    verify(jobPersistenceProvider, never()).updateJobStatus(any(), any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("A cancelled event for a job with no row here is not an error")
+  void onJobEvent_cancelledWithoutRow_isIgnored() {
+    when(jobPersistenceProvider.getJob("job-123")).thenReturn(Optional.empty());
+
+    listener.onJobEvent(Map.of("jobId", "job-123"), "job.job-123.cancelled");
+
+    verify(jobPersistenceProvider, never()).updateJobStatus(any(), any(), any(), any());
   }
 }
