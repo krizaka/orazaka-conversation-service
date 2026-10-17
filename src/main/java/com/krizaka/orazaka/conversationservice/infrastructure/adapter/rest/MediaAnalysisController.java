@@ -165,7 +165,11 @@ public class MediaAnalysisController {
     }
     try {
       Path basePath = Path.of(uploadDir).toRealPath();
-      Path temp = basePath.resolve(UUID.fromString(user.id().toString()).toString()).resolve("temp").normalize();
+      Path temp =
+          basePath
+              .resolve(UUID.fromString(user.id().toString()).toString())
+              .resolve("temp")
+              .normalize();
       if (!temp.startsWith(basePath) || !Files.isDirectory(temp)) {
         return ResponseEntity.notFound().build();
       }
