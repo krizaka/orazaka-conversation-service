@@ -69,9 +69,9 @@ class MediaAnalysisControllerTest {
       var kept = files.toList();
       org.junit.jupiter.api.Assertions.assertEquals(1, kept.size());
       org.junit.jupiter.api.Assertions.assertTrue(
-          kept.get(0).getFileName().toString().endsWith(".png"));
+          kept.getFirst().getFileName().toString().endsWith(".png"));
       org.junit.jupiter.api.Assertions.assertTrue(
-          testAssets().isEncrypted(kept.get(0)), "only sealed bytes leave the disk");
+          testAssets().isEncrypted(kept.getFirst()), "only sealed bytes leave the disk");
     }
   }
 
