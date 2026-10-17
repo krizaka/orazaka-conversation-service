@@ -44,7 +44,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
  * still gets the screen it needs.
  */
 @SpringJUnitWebConfig(AppVersionContractWiringTest.Wiring.class)
-@TestPropertySource(properties = "krizaka.app-config.store=memory")
+@TestPropertySource(
+    properties = {"krizaka.app-config.store=memory", "krizaka.app-config.admin.enabled=true"})
 class AppVersionContractWiringTest {
 
   private static final String BODY =

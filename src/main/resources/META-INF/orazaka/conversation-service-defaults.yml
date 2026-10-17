@@ -64,6 +64,13 @@ spring:
   # api-key / model wiring is loaded from the DB (ai_providers + orazaka_models) by the Dynamic
   # Model Router. Add/change providers in the DB (admin console), never in a file.
 
+krizaka:
+  app-config:
+    # The apps' version contract (krizaka-app-config): the operator edits the parameters through the admin API
+    # (ROLE_ADMIN, with a reason; every revision is kept). The public config endpoint needs no switch.
+    admin:
+      enabled: true
+
 management:
   endpoint:
     health:
