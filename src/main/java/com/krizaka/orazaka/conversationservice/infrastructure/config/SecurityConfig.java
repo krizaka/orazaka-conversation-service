@@ -109,9 +109,9 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers("/api/v1/status/health")
                     .permitAll()
-                    // The apps' version contract (krizaka-app-config): the config is public, so an old
-                    // build with an expired session still learns it must update; its parameters are
-                    // edited by administrators only.
+                    // The apps' version contract (krizaka-app-config): the config is public, so
+                    // an old build with an expired session still learns it must update; its
+                    // parameters are edited by administrators only.
                     .requestMatchers("/api/v1/app-config")
                     .permitAll()
                     .requestMatchers("/api/v1/admin/app-config/**")
