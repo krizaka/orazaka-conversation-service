@@ -52,6 +52,9 @@ updates:
         applies-to: security-updates
         patterns: ["*"]
     ignore:
+      # Node majors are a decision, not a bump: LTS only (22/24), moved by hand
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
       # Java 21 LTS until a coordinated move
       - dependency-name: "eclipse-temurin"
         update-types: ["version-update:semver-major"]
