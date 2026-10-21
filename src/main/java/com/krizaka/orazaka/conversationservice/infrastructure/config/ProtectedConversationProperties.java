@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *
  * @param regulatedDays days from a conversation's last turn
  */
-@ConfigurationProperties(prefix = "orazaka.conversation.retention")
+@ConfigurationProperties(prefix = "orazaka.router.regulated-retention")
 public record ProtectedConversationProperties(@DefaultValue("30") int regulatedDays) {
 
   /** Compact canonical constructor enforcing the wiring's invariants (ERR-106). */

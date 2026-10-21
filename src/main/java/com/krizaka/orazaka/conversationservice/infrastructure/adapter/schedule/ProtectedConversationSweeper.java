@@ -31,7 +31,7 @@ public class ProtectedConversationSweeper {
   }
 
   /** Removes the conversations that left the window. */
-  @Scheduled(cron = "${orazaka.conversation.retention.regulated-cron:0 45 3 * * *}")
+  @Scheduled(cron = "${orazaka.router.regulated-retention.cron:0 45 3 * * *}")
   public void sweep() {
     Erased erased = store.eraseOlderThan(properties.regulatedDays());
     if (erased.conversations() > 0) {
