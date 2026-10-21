@@ -124,4 +124,34 @@ class OperatorAuditFilterTest {
 
     assertThat(response.getStatus()).isEqualTo(201);
   }
+
+  @Test
+  void aUserPrincipalIsRecordedByItsIdAndEmailNeverByItsToString() throws Exception {
+    // This service authenticates with the hydrated User record as principal: its toString holds
+    // preferences and tiers.
+    var user =
+        new com.krizaka.users.domain.model.User(
+            java.util.UUID.fromString("550e8400-e29b-41d4-a716-446655440001"),
+            "qa_admin",
+            "ada@example.test",
+            true,
+            java.util.Set.of("ROLE_ADMIN"),
+            java.util.Map.of(),
+            List.of(),
+            "admin");
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                user,
+                "token",
+                List.of(
+                    new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                        "ROLE_ADMIN"))));
+
+    call("PUT", "/api/v1/models/m1", 200);
+
+    var line = lines.getFirst();
+    assertThat(line.actorId()).isEqualTo("550e8400-e29b-41d4-a716-446655440001");
+    assertThat(line.actorLabel()).isEqualTo("ada@example.test");
+  }
 }
