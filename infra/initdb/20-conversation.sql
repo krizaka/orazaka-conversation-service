@@ -107,3 +107,16 @@ SELECT platform, revision, min_supported_version, latest_version, update_overrid
        updated_at
 FROM app_config
 ON CONFLICT (platform, revision) DO NOTHING;
+
+-- ADR-085: every operator write of the conversation service (model registry, app configuration): who/what/target/request/outcome (ids only).
+CREATE TABLE IF NOT EXISTS operator_audit (
+    id BIGSERIAL PRIMARY KEY,
+    at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actor_id VARCHAR(255),
+    actor_label VARCHAR(255) NOT NULL,
+    action VARCHAR(160) NOT NULL,
+    target_id VARCHAR(255),
+    request_id VARCHAR(64),
+    outcome VARCHAR(12) NOT NULL DEFAULT 'ok'
+);
+CREATE INDEX IF NOT EXISTS idx_operator_audit_at ON operator_audit(at DESC);
