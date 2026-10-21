@@ -1,5 +1,6 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.model.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -100,12 +101,18 @@ class OperatorAuditFilter extends OncePerRequestFilter {
       pattern.replace(last, pattern.length(), "/{id}");
     }
     String outcome = status < 400 ? "ok" : REFUSALS.contains(status) ? "refused" : "failed";
-    String label =
-        auth instanceof JwtAuthenticationToken jwt
-            ? claim(jwt, "email", auth.getName())
-            : auth.getName();
+    // This service's principal is the hydrated User record: its id and e-mail, never its toString
+    // (preferences, tiers).
+    String actorId = auth.getName();
+    String label = auth.getName();
+    if (auth.getPrincipal() instanceof User user) {
+      actorId = user.id().toString();
+      label = user.email();
+    } else if (auth instanceof JwtAuthenticationToken jwt) {
+      label = claim(jwt, "email", auth.getName());
+    }
     return new OperatorAuditStore.Line(
-        auth.getName(), label, method + " " + pattern, target, MDC.get("requestId"), outcome);
+        actorId, label, method + " " + pattern, target, MDC.get("requestId"), outcome);
   }
 
   private static String claim(JwtAuthenticationToken jwt, String name, String fallback) {
