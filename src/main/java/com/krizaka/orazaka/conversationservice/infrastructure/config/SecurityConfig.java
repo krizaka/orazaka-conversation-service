@@ -4,6 +4,8 @@ import com.krizaka.security.web.SecurityBaseline;
 import com.krizaka.users.domain.model.User;
 import com.krizaka.users.domain.port.UserDirectoryClient;
 import jakarta.servlet.Filter;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +19,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
@@ -41,6 +44,7 @@ public class SecurityConfig {
 
   private static final String ADMIN = "ROLE_ADMIN";
   private static final String USER = "ROLE_USER";
+  private static final String SERVICE = "SERVICE";
 
   private final UserDirectoryClient userDirectoryService;
   private final JwtDecoder identityJwtDecoder;
@@ -63,7 +67,16 @@ public class SecurityConfig {
     return authentication -> {
       if (authentication instanceof BearerTokenAuthenticationToken bearerToken) {
         String token = bearerToken.getToken();
-        User user = resolvePrincipal(token);
+        Jwt jwt = decode(token);
+        if (isServiceToken(jwt)) {
+          // A machine caller (another Orazaka service: the Studio service asking for an erasure,
+          // orazaka#301) has no user row to hydrate. Its principal is its own name and its only
+          // authority is SERVICE: the baseline reserves /internal/v1/** for exactly that, and every
+          // user route asks for ADMIN or USER, which this token does not carry.
+          return new UsernamePasswordAuthenticationToken(
+              jwt.getSubject(), token, List.of(new SimpleGrantedAuthority(SERVICE)));
+        }
+        User user = hydrate(jwt.getSubject());
         if (!user.enabled()) {
           throw new BadCredentialsException("Invalid or inactive session token");
         }
@@ -75,18 +88,26 @@ public class SecurityConfig {
   }
 
   /**
-   * Resolves a bearer token to its principal. The token must be a session JWT — {@code oz_} API
-   * keys are exchanged for JWTs at the edge, so the router never sees them. The signature is
-   * verified locally (shared HS256 secret); the principal is hydrated by {@code sub} through the
-   * cached user directory (the identity service's internal API).
+   * Decodes a bearer token as a session JWT. The token must be one — {@code oz_} API keys are
+   * exchanged for JWTs at the edge, so the router never sees them. The signature is verified
+   * locally (shared HS256 secret).
    */
-  private User resolvePrincipal(String token) {
-    String userId;
+  private Jwt decode(String token) {
     try {
-      userId = identityJwtDecoder.decode(token).getSubject();
+      return identityJwtDecoder.decode(token);
     } catch (JwtException ex) {
       throw new BadCredentialsException("Invalid or inactive session token");
     }
+  }
+
+  /** Whether the token is a service-to-service one: {@code roles} carries {@code SERVICE}. */
+  private static boolean isServiceToken(Jwt jwt) {
+    Object roles = jwt.getClaim("roles");
+    return roles instanceof Collection<?> granted && granted.contains(SERVICE);
+  }
+
+  /** The principal of a user token, hydrated by {@code sub} through the cached user directory. */
+  private User hydrate(String userId) {
     try {
       return userDirectoryService.getUser(userId);
     } catch (RuntimeException ex) {
