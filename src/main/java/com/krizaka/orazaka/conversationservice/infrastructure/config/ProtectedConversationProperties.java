@@ -8,15 +8,15 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * orazaka#301. Must equal the studio service's {@code retention.sensitive-run-days}: the consent
  * statement states one figure.
  *
- * @param retentionDays days from a conversation's last turn
+ * @param regulatedDays days from a conversation's last turn
  */
-@ConfigurationProperties(prefix = "orazaka.conversation.protected")
-public record ProtectedConversationProperties(@DefaultValue("30") int retentionDays) {
+@ConfigurationProperties(prefix = "orazaka.conversation.retention")
+public record ProtectedConversationProperties(@DefaultValue("30") int regulatedDays) {
 
   /** Compact canonical constructor enforcing the wiring's invariants (ERR-106). */
   public ProtectedConversationProperties {
-    if (retentionDays < 1) {
-      throw new IllegalArgumentException("protected retention-days must be at least 1");
+    if (regulatedDays < 1) {
+      throw new IllegalArgumentException("regulated-days must be at least 1");
     }
   }
 }

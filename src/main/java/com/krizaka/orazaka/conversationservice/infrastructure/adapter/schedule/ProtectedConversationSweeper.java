@@ -31,9 +31,9 @@ public class ProtectedConversationSweeper {
   }
 
   /** Removes the conversations that left the window. */
-  @Scheduled(cron = "${orazaka.conversation.protected.retention-cron:0 45 3 * * *}")
+  @Scheduled(cron = "${orazaka.conversation.retention.regulated-cron:0 45 3 * * *}")
   public void sweep() {
-    Erased erased = store.eraseOlderThan(properties.retentionDays());
+    Erased erased = store.eraseOlderThan(properties.regulatedDays());
     if (erased.conversations() > 0) {
       logger.info(
           "Retention removed {} conversation(s), {} message(s) of a regulated pack",
