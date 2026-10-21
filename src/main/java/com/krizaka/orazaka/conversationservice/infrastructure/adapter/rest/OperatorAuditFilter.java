@@ -1,5 +1,6 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.users.domain.model.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -104,7 +105,7 @@ class OperatorAuditFilter extends OncePerRequestFilter {
     // (preferences, tiers).
     String actorId = auth.getName();
     String label = auth.getName();
-    if (auth.getPrincipal() instanceof com.krizaka.users.domain.model.User user) {
+    if (auth.getPrincipal() instanceof User user) {
       actorId = user.id().toString();
       label = user.email();
     } else if (auth instanceof JwtAuthenticationToken jwt) {
