@@ -441,7 +441,7 @@ class JobStreamServiceTest {
     }
     var all = service.progressSince("u", 0);
     assertEquals(JobStreamService.REPLAY_LIMIT, all.size());
-    assertEquals(150L, all.get(all.size() - 1).id());
+    assertEquals(150L, all.getLast().id());
   }
 
   @Test
