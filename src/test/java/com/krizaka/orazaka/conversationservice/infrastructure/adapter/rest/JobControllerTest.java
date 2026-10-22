@@ -164,9 +164,9 @@ class JobControllerTest {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "user", "user@test.class", true, Set.of("ROLE_USER"), Map.of());
     SseEmitter emitter = new SseEmitter();
-    when(jobStreamService.register(userId.toString())).thenReturn(emitter);
+    when(jobStreamService.register(userId.toString(), null)).thenReturn(emitter);
 
-    SseEmitter result = jobController.streamJobs(user);
+    SseEmitter result = jobController.streamJobs(user, null);
 
     assertEquals(emitter, result);
   }

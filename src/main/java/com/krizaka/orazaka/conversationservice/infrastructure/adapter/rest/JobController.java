@@ -152,9 +152,14 @@ public class JobController {
 
   /** Registers a Server-Sent Events stream for real-time job status notifications. */
   @GetMapping("/stream")
-  public SseEmitter streamJobs(@AuthenticationPrincipal User user) {
+  public SseEmitter streamJobs(
+      @AuthenticationPrincipal User user,
+      @org.springframework.web.bind.annotation.RequestHeader(
+              value = "Last-Event-ID",
+              required = false)
+          String lastEventId) {
     logger.debug("Registering SSE emitter for user: {}", user.id());
-    return jobStreamService.register(user.id().toString());
+    return jobStreamService.register(user.id().toString(), lastEventId);
   }
 
   /** Request DTO for job progress updates. */

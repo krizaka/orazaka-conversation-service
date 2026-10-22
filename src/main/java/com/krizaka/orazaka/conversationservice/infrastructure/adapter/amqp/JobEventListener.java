@@ -127,6 +127,30 @@ public class JobEventListener {
         detail.put("steps", total.intValue());
       }
     }
+    if (message.get("stage") instanceof String stage && STAGES.contains(stage)) {
+      detail.put("stage", stage);
+      if (message.get("weightsPercent") instanceof Number pct
+          && pct.intValue() >= 0
+          && pct.intValue() <= 100) {
+        detail.put("weightsPercent", pct.intValue());
+      }
+      if (message.get("etaSeconds") instanceof Number eta && eta.longValue() >= 0) {
+        detail.put(
+            "etaSeconds", eta.longValue() > Integer.MAX_VALUE ? Integer.MAX_VALUE : eta.intValue());
+      }
+      if (message.get("at") instanceof Number at && at.longValue() >= 0) {
+        detail.put("at", at.longValue());
+      }
+    }
     return detail;
   }
+
+  /** The stages a worker names (orazaka-worker-media#64); anything else is dropped. */
+  private static final Set<String> STAGES =
+      Set.of(
+          "COLD_START_WAKEUP",
+          "STREAMING_WEIGHTS_NVME",
+          "INFERENCE_STEP",
+          "SANDBOX_VERIFICATION",
+          "COMPLETED");
 }
