@@ -153,6 +153,48 @@ class JobEventListenerTest {
   }
 
   @Test
+  @DisplayName("The stage, the real weights percentage, the ETA and the timestamp reach the stream")
+  void progressDetail_relaysTheStage() {
+    assertEquals(
+        Map.of(
+            "phase",
+            "loading",
+            "stage",
+            "STREAMING_WEIGHTS_NVME",
+            "weightsPercent",
+            40,
+            "etaSeconds",
+            7,
+            "at",
+            1700000000000L),
+        JobEventListener.progressDetail(
+            Map.of(
+                "phase",
+                "loading",
+                "stage",
+                "STREAMING_WEIGHTS_NVME",
+                "weightsPercent",
+                40,
+                "etaSeconds",
+                7,
+                "at",
+                1700000000000L)));
+  }
+
+  @Test
+  @DisplayName("An unknown stage, a percentage over 100 or a negative ETA is dropped")
+  void progressDetail_dropsABadStage() {
+    assertEquals(
+        Map.of(),
+        JobEventListener.progressDetail(
+            Map.of("stage", "DAYDREAMING", "weightsPercent", 40, "etaSeconds", 7)));
+    assertEquals(
+        Map.of("stage", "COMPLETED"),
+        JobEventListener.progressDetail(
+            Map.of("stage", "COMPLETED", "weightsPercent", 140, "etaSeconds", -1)));
+  }
+
+  @Test
   @DisplayName("A cancelled event applies CANCELLED, never FAILED")
   void onJobEvent_cancelledKey_cancelsJob() {
     when(jobPersistenceProvider.getJob("job-123")).thenReturn(Optional.of(job("job-123")));

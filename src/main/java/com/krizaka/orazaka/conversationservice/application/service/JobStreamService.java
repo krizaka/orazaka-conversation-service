@@ -3,12 +3,19 @@ package com.krizaka.orazaka.conversationservice.application.service;
 import com.krizaka.orazaka.persistence.domain.event.JobStatusChangedEvent;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.JobPersistenceProvider;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -29,8 +36,57 @@ public class JobStreamService {
   // Map of userId -> list of active emitters
   private final Map<String, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
+  /** How many progress events a user can replay after a reconnect, and for how long. */
+  static final int REPLAY_LIMIT = 100;
+
+  static final Duration REPLAY_TTL = Duration.ofMinutes(10);
+
+  /** A numbered progress event: its id is what the client sends back as {@code Last-Event-ID}. */
+  public record NumberedProgress(long id, Instant at, Map<String, Object> payload) {}
+
+  private final Clock clock;
+  private final Map<String, ArrayDeque<NumberedProgress>> replay = new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> counters = new ConcurrentHashMap<>();
+
+  @Autowired
   public JobStreamService(JobPersistenceProvider jobPersistenceProvider) {
+    this(jobPersistenceProvider, Clock.systemUTC());
+  }
+
+  JobStreamService(JobPersistenceProvider jobPersistenceProvider, Clock clock) {
     this.jobPersistenceProvider = jobPersistenceProvider;
+    this.clock = clock;
+  }
+
+  private NumberedProgress remember(String userId, Map<String, Object> payload) {
+    long id = counters.computeIfAbsent(userId, k -> new AtomicLong()).incrementAndGet();
+    Instant now = clock.instant();
+    var entry = new NumberedProgress(id, now, payload);
+    var buffer = replay.computeIfAbsent(userId, k -> new ArrayDeque<>());
+    synchronized (buffer) {
+      while (!buffer.isEmpty() && buffer.peekFirst().at().plus(REPLAY_TTL).isBefore(now)) {
+        buffer.pollFirst();
+      }
+      buffer.addLast(entry);
+      while (buffer.size() > REPLAY_LIMIT) {
+        buffer.pollFirst();
+      }
+    }
+    return entry;
+  }
+
+  /** The user's progress events after {@code lastEventId}, oldest first (resume after a drop). */
+  List<NumberedProgress> progressSince(String userId, long lastEventId) {
+    var buffer = replay.get(userId);
+    if (buffer == null) {
+      return List.of();
+    }
+    synchronized (buffer) {
+      Instant now = clock.instant();
+      return buffer.stream()
+          .filter(e -> e.id() > lastEventId && !e.at().plus(REPLAY_TTL).isBefore(now))
+          .toList();
+    }
   }
 
   @Scheduled(fixedRate = 15000)
@@ -62,6 +118,17 @@ public class JobStreamService {
    * @return A new SseEmitter instance.
    */
   public SseEmitter register(String userId) {
+    return register(userId, null);
+  }
+
+  /**
+   * Registers a client emitter and replays the progress events it missed ({@code Last-Event-ID}).
+   *
+   * @param userId The authenticated user ID.
+   * @param lastEventId The last event id the client saw, or null/invalid for none.
+   * @return A new SseEmitter instance.
+   */
+  public SseEmitter register(String userId, String lastEventId) {
     // 30 minute timeout
     SseEmitter emitter = new SseEmitter(1800000L);
 
@@ -79,7 +146,32 @@ public class JobStreamService {
       userEmitters.remove(emitter);
     }
 
+    long after = parseEventId(lastEventId);
+    if (after >= 0) {
+      for (NumberedProgress missed : progressSince(userId, after)) {
+        try {
+          emitter.send(
+              SseEmitter.event()
+                  .id(String.valueOf(missed.id()))
+                  .name("job-progress")
+                  .data(missed.payload()));
+        } catch (IOException e) {
+          logger.debug("Failed to replay a missed progress event", e);
+          userEmitters.remove(emitter);
+          break;
+        }
+      }
+    }
+
     return emitter;
+  }
+
+  private static long parseEventId(String lastEventId) {
+    try {
+      return lastEventId == null ? -1 : Long.parseLong(lastEventId.trim());
+    } catch (NumberFormatException notANumber) {
+      return -1;
+    }
   }
 
   /**
@@ -131,11 +223,18 @@ public class JobStreamService {
    * @param jobId The job ID.
    * @param userId The user ID.
    * @param progress The progress percentage.
-   * @param detail {@code phase} (loading, generating, encoding, uploading) and {@code step}/{@code
-   *     steps} when the executor knows them; empty otherwise.
+   * @param detail {@code phase} (loading, generating, encoding, uploading), {@code step}/{@code
+   *     steps}, and the worker's {@code stage}, {@code weightsPercent}, {@code etaSeconds} and
+   *     {@code at} when it knows them; empty otherwise.
    */
   public void broadcastProgress(
       String jobId, String userId, int progress, Map<String, Object> detail) {
+    Map<String, Object> payload = new HashMap<>(detail);
+    payload.put("jobId", jobId);
+    payload.put("progress", progress);
+    // Numbered and kept even with nobody connected: the browser that is reconnecting asks for it.
+    NumberedProgress numbered = remember(userId, payload);
+
     var userEmitters = emitters.get(userId);
     if (userEmitters == null || userEmitters.isEmpty()) {
       return;
@@ -143,13 +242,14 @@ public class JobStreamService {
 
     logger.debug(
         "Broadcasting job progress to user {}: Job ID={}, Progress={}%", userId, jobId, progress);
-    Map<String, Object> payload = new HashMap<>(detail);
-    payload.put("jobId", jobId);
-    payload.put("progress", progress);
 
     for (SseEmitter emitter : userEmitters) {
       try {
-        emitter.send(SseEmitter.event().name("job-progress").data(payload));
+        emitter.send(
+            SseEmitter.event()
+                .id(String.valueOf(numbered.id()))
+                .name("job-progress")
+                .data(payload));
       } catch (IOException e) {
         logger.debug(
             "Failed to broadcast job progress event to user emitter (IOException), evicting emitter quietly: {}",

@@ -377,4 +377,95 @@ class JobStreamServiceTest {
       fail("Reflection failed: " + e.getMessage());
     }
   }
+
+  // --- Numbered progress with Last-Event-ID resume (orazaka-worker-media#64) ---
+
+  private static final class MutableClock extends java.time.Clock {
+    private Instant now = Instant.parse("2026-01-01T00:00:00Z");
+
+    void advance(java.time.Duration by) {
+      now = now.plus(by);
+    }
+
+    @Override
+    public java.time.ZoneId getZone() {
+      return java.time.ZoneOffset.UTC;
+    }
+
+    @Override
+    public java.time.Clock withZone(java.time.ZoneId zone) {
+      return this;
+    }
+
+    @Override
+    public Instant instant() {
+      return now;
+    }
+  }
+
+  private void progress(JobStreamService svc, String user, int pct) {
+    svc.broadcastProgress("job-1", user, pct, Map.of("stage", "INFERENCE_STEP"));
+  }
+
+  @Test
+  void progress_isNumberedInOrder() {
+    progress(service, "u", 10);
+    progress(service, "u", 20);
+    progress(service, "u", 30);
+    var all = service.progressSince("u", 0);
+    assertEquals(
+        java.util.List.of(1L, 2L, 3L),
+        all.stream().map(JobStreamService.NumberedProgress::id).toList());
+    assertEquals(30, all.get(2).payload().get("progress"));
+  }
+
+  @Test
+  void progress_isKeptWhileTheUserIsDisconnected_andResumesAfterLastEventId() {
+    // no emitter registered: the browser is reconnecting
+    progress(service, "u", 10);
+    progress(service, "u", 20);
+    progress(service, "u", 30);
+    var missed = service.progressSince("u", 1);
+    assertEquals(
+        java.util.List.of(2L, 3L),
+        missed.stream().map(JobStreamService.NumberedProgress::id).toList());
+    assertTrue(service.progressSince("u", 3).isEmpty(), "nothing is replayed twice");
+  }
+
+  @Test
+  void progress_neverCrossesUsers() {
+    progress(service, "alice", 10);
+    assertTrue(service.progressSince("bob", 0).isEmpty());
+  }
+
+  @Test
+  void progress_bufferIsBoundedAndKeepsTheNewest() {
+    for (int i = 0; i < 150; i++) {
+      progress(service, "u", i % 100);
+    }
+    var all = service.progressSince("u", 0);
+    assertEquals(JobStreamService.REPLAY_LIMIT, all.size());
+    assertEquals(150L, all.getLast().id());
+  }
+
+  @Test
+  void progress_oldEventsExpire() {
+    var clock = new MutableClock();
+    var timed = new JobStreamService(jobPersistenceProvider, clock);
+    progress(timed, "u", 10);
+    clock.advance(JobStreamService.REPLAY_TTL.plusSeconds(1));
+    progress(timed, "u", 20);
+    assertEquals(
+        java.util.List.of(2L),
+        timed.progressSince("u", 0).stream().map(JobStreamService.NumberedProgress::id).toList());
+  }
+
+  @Test
+  void register_replaysWhatTheClientMissed() {
+    progress(service, "u", 10);
+    progress(service, "u", 20);
+    SseEmitter emitter = service.register("u", "1");
+    assertNotNull(emitter);
+    assertEquals(1, service.getActiveConnectionCount());
+  }
 }
