@@ -1,9 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.krizaka.orazaka.core.application.pipeline.PipelineDisabledException;
 import com.krizaka.orazaka.studio.domain.exception.TurnConsentRequiredException;
