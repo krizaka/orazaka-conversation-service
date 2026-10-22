@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,8 +46,7 @@ public class JobStreamService {
 
   private final Clock clock;
   private final Map<String, ArrayDeque<NumberedProgress>> replay = new ConcurrentHashMap<>();
-  private final Map<String, java.util.concurrent.atomic.AtomicLong> counters =
-      new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> counters = new ConcurrentHashMap<>();
 
   @Autowired
   public JobStreamService(JobPersistenceProvider jobPersistenceProvider) {
@@ -59,10 +59,7 @@ public class JobStreamService {
   }
 
   private NumberedProgress remember(String userId, Map<String, Object> payload) {
-    long id =
-        counters
-            .computeIfAbsent(userId, k -> new java.util.concurrent.atomic.AtomicLong())
-            .incrementAndGet();
+    long id = counters.computeIfAbsent(userId, k -> new AtomicLong()).incrementAndGet();
     Instant now = clock.instant();
     var entry = new NumberedProgress(id, now, payload);
     var buffer = replay.computeIfAbsent(userId, k -> new ArrayDeque<>());

@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -154,10 +155,7 @@ public class JobController {
   @GetMapping("/stream")
   public SseEmitter streamJobs(
       @AuthenticationPrincipal User user,
-      @org.springframework.web.bind.annotation.RequestHeader(
-              value = "Last-Event-ID",
-              required = false)
-          String lastEventId) {
+      @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
     logger.debug("Registering SSE emitter for user: {}", user.id());
     return jobStreamService.register(user.id().toString(), lastEventId);
   }
