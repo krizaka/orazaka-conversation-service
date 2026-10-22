@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -88,7 +89,9 @@ public class RestErrorResolver {
         ex.capability(),
         ex.required(),
         ex.available());
-    return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(refusalBody(ex));
+    return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(refusalBody(ex));
   }
 
   /**
@@ -105,6 +108,7 @@ public class RestErrorResolver {
   public ResponseEntity<Map<String, Object>> handlePipelineDisabled(PipelineDisabledException ex) {
     logger.warn("Engine turn refused: {}", ex.getMessage());
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+        .contentType(MediaType.APPLICATION_JSON)
         .body(Map.of("status", "engine_disabled", "message", ex.getMessage()));
   }
 
@@ -124,9 +128,12 @@ public class RestErrorResolver {
       PipelineShortCircuitException ex) {
     logger.info("Pipeline refused by {}: {}", ex.interceptorId(), ex.reason());
     if (ex.getCause() instanceof InsufficientCreditsException credits) {
-      return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(refusalBody(credits));
+      return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+          .contentType(MediaType.APPLICATION_JSON)
+          .body(refusalBody(credits));
     }
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .contentType(MediaType.APPLICATION_JSON)
         .body(
             Map.of(
                 "status", ex.reason(),
@@ -150,7 +157,9 @@ public class RestErrorResolver {
     body.put("status", "consent_required");
     body.put("consentVersion", ex.requiredVersion());
     body.put("statement", ex.statement());
-    return ResponseEntity.status(HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS).body(body);
+    return ResponseEntity.status(HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(body);
   }
 
   private static Map<String, Object> refusalBody(InsufficientCreditsException ex) {
