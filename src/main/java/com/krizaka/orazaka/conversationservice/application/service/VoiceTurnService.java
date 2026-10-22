@@ -141,8 +141,8 @@ public class VoiceTurnService {
    * @param turn the request
    * @param actor the person taking the turn
    * @return the prepared turn, holding its credit reservation
-   * @throws VoiceTurnRefusedException 404 for an unknown installation, 403 without the audio grant,
-   *     422 when no voice speaks the locale
+   * @throws VoiceTurnRefusedException 404 for an unknown installation, 403 for a recording without
+   *     the audio grant, 422 when no voice speaks the locale (only when the turn is to be spoken)
    * @throws com.krizaka.orazaka.studio.domain.exception.TurnConsentRequiredException 451, relayed
    * @throws com.krizaka.billing.domain.exception.InsufficientCreditsException 402
    */
@@ -161,8 +161,12 @@ public class VoiceTurnService {
                             "installation-not-found",
                             "no active installation " + turn.installationId() + " of yours"));
 
+    // Hearing a recording and speaking an answer are the audio capability. A typed turn without it
+    // is not refused: it is answered as text, sentence by sentence, with no voice (the plan decides
+    // whether the engine speaks, so a product without a voice engine is a plan, not a code path).
     EntitlementSnapshot plan = entitlements.forActor(actorId);
-    if (plan.resolved() && !plan.allows(AUDIO_ENTITLEMENT)) {
+    boolean audioEntitled = !plan.resolved() || plan.allows(AUDIO_ENTITLEMENT);
+    if (turn.audio() != null && !audioEntitled) {
       throw new VoiceTurnRefusedException(
           HttpStatus.FORBIDDEN,
           "capability-not-in-plan",
@@ -170,15 +174,19 @@ public class VoiceTurnService {
     }
 
     SpeechVoice voice =
-        (turn.voice() == null ? voices.defaultVoice(turn.locale()) : voices.findVoice(turn.voice()))
-            .orElseThrow(
-                () ->
-                    new VoiceTurnRefusedException(
-                        HttpStatus.UNPROCESSABLE_CONTENT,
-                        "no-voice",
-                        turn.voice() == null
-                            ? "no voice speaks " + turn.locale() + " in the catalogue"
-                            : "no catalogued voice named " + turn.voice()));
+        audioEntitled
+            ? (turn.voice() == null
+                    ? voices.defaultVoice(turn.locale())
+                    : voices.findVoice(turn.voice()))
+                .orElseThrow(
+                    () ->
+                        new VoiceTurnRefusedException(
+                            HttpStatus.UNPROCESSABLE_CONTENT,
+                            "no-voice",
+                            turn.voice() == null
+                                ? "no voice speaks " + turn.locale() + " in the catalogue"
+                                : "no catalogued voice named " + turn.voice()))
+            : null;
 
     Context base = contextService.resolve(actor, turn.conversationId());
     String turnId = UUID.randomUUID().toString();
@@ -355,8 +363,12 @@ public class VoiceTurnService {
     return new ChatRequest(said, messages, Map.of(), context);
   }
 
+  /** The sentence as audio, or {@code null} when the turn is not spoken (no voice, text only). */
   private VoiceTurnEvent.Audio speak(
       SpeechVoice voice, Context base, String text, Metering metering) {
+    if (voice == null) {
+      return null;
+    }
     VoiceClip clip =
         VoiceClip.of(
             aiClient

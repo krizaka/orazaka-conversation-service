@@ -9,7 +9,7 @@ import com.krizaka.orazaka.studio.domain.model.TurnDeclarations;
  *
  * @param turn the request
  * @param declarations the pack's declarations, or {@code null} outside an installation
- * @param voice the voice that will speak
+ * @param voice the voice that will speak, or {@code null} when the plan answers in text only
  * @param base the actor's context
  * @param turnId the id the chat leg declares, to find its usage
  * @param holdId the reservation, or {@code null} when billing is off
