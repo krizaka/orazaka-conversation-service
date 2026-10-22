@@ -413,7 +413,9 @@ class JobStreamServiceTest {
     progress(service, "u", 20);
     progress(service, "u", 30);
     var all = service.progressSince("u", 0);
-    assertEquals(java.util.List.of(1L, 2L, 3L), all.stream().map(JobStreamService.NumberedProgress::id).toList());
+    assertEquals(
+        java.util.List.of(1L, 2L, 3L),
+        all.stream().map(JobStreamService.NumberedProgress::id).toList());
     assertEquals(30, all.get(2).payload().get("progress"));
   }
 
@@ -424,7 +426,9 @@ class JobStreamServiceTest {
     progress(service, "u", 20);
     progress(service, "u", 30);
     var missed = service.progressSince("u", 1);
-    assertEquals(java.util.List.of(2L, 3L), missed.stream().map(JobStreamService.NumberedProgress::id).toList());
+    assertEquals(
+        java.util.List.of(2L, 3L),
+        missed.stream().map(JobStreamService.NumberedProgress::id).toList());
     assertTrue(service.progressSince("u", 3).isEmpty(), "nothing is replayed twice");
   }
 
@@ -452,7 +456,8 @@ class JobStreamServiceTest {
     clock.advance(JobStreamService.REPLAY_TTL.plusSeconds(1));
     progress(timed, "u", 20);
     assertEquals(
-        java.util.List.of(2L), timed.progressSince("u", 0).stream().map(JobStreamService.NumberedProgress::id).toList());
+        java.util.List.of(2L),
+        timed.progressSince("u", 0).stream().map(JobStreamService.NumberedProgress::id).toList());
   }
 
   @Test
