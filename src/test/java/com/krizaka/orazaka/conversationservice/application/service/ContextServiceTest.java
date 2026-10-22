@@ -119,4 +119,64 @@ class ContextServiceTest {
     attributes.put("aiBehavior", aiBehavior);
     return attributes;
   }
+
+  private static com.krizaka.billing.domain.model.EntitlementSnapshot plan(
+      String key, Map<String, String> entitlements) {
+    return new com.krizaka.billing.domain.model.EntitlementSnapshot(
+        "550e8400-e29b-41d4-a716-446655440000",
+        key,
+        entitlements,
+        100L,
+        java.time.Instant.now().plusSeconds(60));
+  }
+
+  private static Context resolveUnder(com.krizaka.billing.domain.model.EntitlementSnapshot plan) {
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
+    com.krizaka.billing.domain.port.EntitlementProvider entitlements =
+        org.mockito.Mockito.mock(com.krizaka.billing.domain.port.EntitlementProvider.class);
+    org.mockito.Mockito.when(entitlements.forActor(org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(plan);
+    return new ContextService(provider, entitlements).resolve(testUser(), "conv-r");
+  }
+
+  @Test
+  void resolve_planWithRetentionNone_declaresTheNoStorageMode() {
+    Context ctx = resolveUnder(plan("yororis", Map.of("retention.none", "true")));
+
+    assertTrue(ctx.retentionNone());
+    assertEquals("none", ctx.preferences().get(Context.RETENTION_KEY));
+  }
+
+  @Test
+  void resolve_planWithoutIt_keepsTheDefault() {
+    assertFalse(resolveUnder(plan("free", Map.of("capability.chat", "true"))).retentionNone());
+    assertFalse(resolveUnder(plan("free", Map.of("retention.none", "false"))).retentionNone());
+  }
+
+  @Test
+  void resolve_unresolvedPlan_keepsTheDefault() {
+    var unresolved =
+        com.krizaka.billing.domain.model.EntitlementSnapshot.unresolved(
+            "550e8400-e29b-41d4-a716-446655440000", java.time.Instant.now().plusSeconds(5));
+
+    assertFalse(resolveUnder(unresolved).retentionNone());
+  }
+
+  @Test
+  void resolve_aUserPreferenceNamedLikeTheModeCannotDeclareIt() {
+    // The platform alone declares it: a stored preference arrives under preference.*.
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
+    var user =
+        new User(
+            UUID.randomUUID(),
+            "x",
+            "x@test.com",
+            true,
+            Set.of("ROLE_USER"),
+            Map.of("orazaka.retention", "none"),
+            null,
+            "free");
+
+    assertFalse(new ContextService(provider).resolve(user, "c").retentionNone());
+  }
 }

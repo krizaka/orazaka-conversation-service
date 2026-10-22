@@ -353,7 +353,7 @@ class VoiceTurnServiceTest {
 
   @Test
   @DisplayName(
-      "Refusals before the stream: unknown installation 404, no speech in the plan 403, no voice 422")
+      "Refusals before the stream: unknown installation 404, a recording without the audio capability 403, no voice 422")
   void refusalsBeforeTheStream() {
     when(declarations.forInstallation(any(), anyString())).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.prepare(text("x"), user))
@@ -365,7 +365,9 @@ class VoiceTurnServiceTest {
         .thenReturn(
             new EntitlementSnapshot(
                 ACTOR.toString(), "free", Map.of(), 0L, Instant.now().plusSeconds(60)));
-    VoiceTurn outside = new VoiceTurn("c", "fr-CA", null, "x", null, null, null);
+    // A recording is transcribed: that is the audio capability. (A typed turn is not refused: it is
+    // answered as text — see textTurnWithoutTheAudioCapability.)
+    VoiceTurn outside = new VoiceTurn("c", "fr-CA", wav(), null, null, null, null);
     assertThatThrownBy(() -> service.prepare(outside, user))
         .isInstanceOfSatisfying(
             VoiceTurnRefusedException.class,
@@ -411,5 +413,95 @@ class VoiceTurnServiceTest {
             .orElseThrow();
     assertThat(sentence.audio().voice()).isEqualTo("piper-fr-tom-medium");
     verify(credits, never()).settleAggregate(anyString(), any(), anyString());
+  }
+
+  private void planWithoutAudio() {
+    when(entitlements.forActor(anyString()))
+        .thenReturn(
+            new EntitlementSnapshot(
+                ACTOR.toString(),
+                "yororis",
+                Map.of("capability.chat", "true"),
+                500L,
+                Instant.now().plusSeconds(60)));
+  }
+
+  @Test
+  @DisplayName(
+      "A typed turn on a plan without capability.audio is answered as text: no speech, no voice needed, no 403")
+  void textTurnWithoutTheAudioCapability() {
+    planWithoutAudio();
+    when(voices.defaultVoice("fr-CA")).thenReturn(Optional.empty());
+    answer("Je t'écoute, ", "prends ton temps.");
+
+    PreparedTurn prepared = service.prepare(text("La semaine a été lourde."), user);
+    service.run(prepared, events::add);
+
+    assertThat(names()).containsSubsequence("delta", "sentence", "done").doesNotContain("error");
+    VoiceTurnEvent.Sentence sentence =
+        events.stream()
+            .filter(VoiceTurnEvent.Sentence.class::isInstance)
+            .map(VoiceTurnEvent.Sentence.class::cast)
+            .findFirst()
+            .orElseThrow();
+    assertThat(sentence.text()).isEqualTo("Je t'écoute, prends ton temps.");
+    assertThat(sentence.audio()).isNull();
+    VoiceTurnEvent.Done done = (VoiceTurnEvent.Done) events.getLast();
+    assertThat(done.usage().ttsSeconds()).isNull();
+    assertThat(done.usage().ttsCharacters()).isZero();
+    verify(ai, never()).audio(any());
+  }
+
+  @Test
+  @DisplayName(
+      "On that plan the crisis guard's reply is still the pack's text, shown without a voice")
+  void crisisOnATextOnlyTurn() {
+    planWithoutAudio();
+    when(ai.stream(any()))
+        .thenReturn(
+            Flux.error(
+                new PipelineShortCircuitException(
+                    "SafetyInterceptor", "crisis_content", WELLBEING.crisisReply(), null)));
+
+    service.run(service.prepare(text("Je pense à en finir."), user), events::add);
+
+    assertThat(names()).containsExactly("safety.crisis", "done");
+    VoiceTurnEvent.SafetyCrisis crisis = (VoiceTurnEvent.SafetyCrisis) events.getFirst();
+    assertThat(crisis.text()).isEqualTo(WELLBEING.crisisReply());
+    assertThat(crisis.audio()).isNull();
+    verify(ai, never()).audio(any());
+  }
+
+  @Test
+  @DisplayName(
+      "The no-storage mode the context declares reaches the chat leg: the engine will keep nothing")
+  void retentionReachesTheChatLeg() {
+    ContextService retained = mock(ContextService.class);
+    when(retained.resolve(any(), anyString()))
+        .thenAnswer(
+            call ->
+                new Context(
+                    ACTOR.toString(),
+                    call.getArgument(1),
+                    Map.of(Context.RETENTION_KEY, Context.RETENTION_NONE),
+                    Set.of()));
+    service =
+        new VoiceTurnService(
+            ai,
+            transcriber,
+            retained,
+            declarations,
+            voices,
+            entitlements,
+            credits,
+            new VoiceClipStore(),
+            new VoiceTurnUsageRegistry());
+    answer("Je t'écoute.");
+    ArgumentCaptor<ChatRequest> sent = ArgumentCaptor.forClass(ChatRequest.class);
+
+    service.run(service.prepare(text("Quelque chose de privé."), user), events::add);
+
+    verify(ai).stream(sent.capture());
+    assertThat(sent.getValue().context().retentionNone()).isTrue();
   }
 }
