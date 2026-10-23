@@ -22,6 +22,12 @@ import tools.jackson.databind.ObjectMapper;
 @RequestMapping("/api/v1/mcp")
 public class McpController {
 
+  /**
+   * What an answer shows instead of a stored token: that one is set, never the token itself
+   * (orazaka-ai-engine#58). Sent back unchanged on an edit, it means « keep the stored one ».
+   */
+  static final String TOKEN_MASK = "********";
+
   private final McpService mcpService;
   private final PlatformMcpServerPersistenceProvider platformMcpServerPersistenceProvider;
   private final UserMcpServerPersistenceProvider userMcpServerPersistenceProvider;
@@ -93,7 +99,10 @@ public class McpController {
     if (user == null) {
       return ResponseEntity.status(401).build();
     }
-    return ResponseEntity.ok(userMcpServerPersistenceProvider.findByUserId(user.id().toString()));
+    return ResponseEntity.ok(
+        userMcpServerPersistenceProvider.findByUserId(user.id().toString()).stream()
+            .map(McpController::masked)
+            .toList());
   }
 
   @PostMapping("/servers/user")
@@ -109,14 +118,26 @@ public class McpController {
       return ResponseEntity.badRequest().body("URL cannot be empty");
     }
     // An id already held by another user is not ours to overwrite (an upsert is a takeover).
+    UserMcpServerDto toSave = payload;
     if (payload.id() != null) {
       var existing = userMcpServerPersistenceProvider.findById(payload.id());
       if (existing.isPresent() && !user.id().toString().equals(existing.get().userId())) {
         return ResponseEntity.notFound().build();
       }
+      if (existing.isPresent() && keepsStoredToken(payload.authToken())) {
+        toSave =
+            new UserMcpServerDto(
+                payload.id(),
+                payload.userId(),
+                payload.label(),
+                payload.url(),
+                existing.get().authToken(),
+                payload.enabled(),
+                payload.createdAt());
+      }
     }
-    UserMcpServerDto saved = userMcpServerPersistenceProvider.save(payload);
-    return ResponseEntity.ok(saved);
+    UserMcpServerDto saved = userMcpServerPersistenceProvider.save(toSave);
+    return ResponseEntity.ok(masked(saved));
   }
 
   @DeleteMapping("/servers/user/{id}")
@@ -140,7 +161,10 @@ public class McpController {
   @GetMapping("/servers/platform")
   @PreAuthorize("hasAuthority('ROLE_ADMIN')")
   public ResponseEntity<@NotNull List<PlatformMcpServerDto>> getPlatformServers() {
-    return ResponseEntity.ok(platformMcpServerPersistenceProvider.findAll());
+    return ResponseEntity.ok(
+        platformMcpServerPersistenceProvider.findAll().stream()
+            .map(McpController::masked)
+            .toList());
   }
 
   @PostMapping("/servers/platform")
@@ -150,8 +174,25 @@ public class McpController {
     if (payload.url() == null && payload.command() == null) {
       return ResponseEntity.badRequest().body("Either URL or Command must be provided");
     }
-    PlatformMcpServerDto saved = platformMcpServerPersistenceProvider.save(payload);
-    return ResponseEntity.ok(saved);
+    PlatformMcpServerDto toSave = payload;
+    if (payload.id() != null && keepsStoredToken(payload.authToken())) {
+      var existing = platformMcpServerPersistenceProvider.findById(payload.id());
+      if (existing.isPresent()) {
+        toSave =
+            new PlatformMcpServerDto(
+                payload.id(),
+                payload.label(),
+                payload.transportType(),
+                payload.url(),
+                payload.command(),
+                payload.args(),
+                existing.get().authToken(),
+                payload.enabled(),
+                payload.createdAt());
+      }
+    }
+    PlatformMcpServerDto saved = platformMcpServerPersistenceProvider.save(toSave);
+    return ResponseEntity.ok(masked(saved));
   }
 
   @DeleteMapping("/servers/platform/{id}")
@@ -162,6 +203,42 @@ public class McpController {
   }
 
   /** DTO representing basic tool definition info. */
+  private static boolean keepsStoredToken(String sent) {
+    return sent == null || sent.isBlank() || TOKEN_MASK.equals(sent);
+  }
+
+  private static UserMcpServerDto masked(UserMcpServerDto dto) {
+    return dto == null
+        ? null
+        : new UserMcpServerDto(
+            dto.id(),
+            dto.userId(),
+            dto.label(),
+            dto.url(),
+            mask(dto.authToken()),
+            dto.enabled(),
+            dto.createdAt());
+  }
+
+  private static PlatformMcpServerDto masked(PlatformMcpServerDto dto) {
+    return dto == null
+        ? null
+        : new PlatformMcpServerDto(
+            dto.id(),
+            dto.label(),
+            dto.transportType(),
+            dto.url(),
+            dto.command(),
+            dto.args(),
+            mask(dto.authToken()),
+            dto.enabled(),
+            dto.createdAt());
+  }
+
+  private static String mask(String token) {
+    return token == null || token.isBlank() ? null : TOKEN_MASK;
+  }
+
   public static record ToolInfoDto(String name, String description, String inputSchema) {
     public ToolInfoDto {
       Objects.requireNonNull(name, "name must not be null");
