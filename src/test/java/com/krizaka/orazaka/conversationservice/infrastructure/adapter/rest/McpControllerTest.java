@@ -136,6 +136,56 @@ class McpControllerTest {
   }
 
   @Test
+  void aTokenIsNeverReturnedOnlyItsPresence() {
+    // orazaka-ai-engine#58: the owner's bearer never comes back in an API answer.
+    UUID userId = UUID.randomUUID();
+    User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
+    UserMcpServerDto withToken =
+        new UserMcpServerDto(
+            1, userId.toString(), "S1", "https://s1", "token123", true, Instant.now(FIXED_CLOCK));
+    UserMcpServerDto withoutToken =
+        new UserMcpServerDto(
+            2, userId.toString(), "S2", "https://s2", null, true, Instant.now(FIXED_CLOCK));
+    when(userMcpServerPersistenceProvider.findByUserId(userId.toString()))
+        .thenReturn(List.of(withToken, withoutToken));
+    when(userMcpServerPersistenceProvider.save(any())).thenAnswer(call -> call.getArgument(0));
+    when(platformMcpServerPersistenceProvider.findAll())
+        .thenReturn(
+            List.of(
+                new PlatformMcpServerDto(
+                    3, "P", "SSE", "https://p", null, null, "platform-secret", true, null)));
+
+    List<UserMcpServerDto> listed = mcpController.getUserServers(user).getBody();
+    Object saved = mcpController.saveUserServer(withToken, user).getBody();
+    List<PlatformMcpServerDto> platform = mcpController.getPlatformServers().getBody();
+
+    assertEquals(McpController.TOKEN_MASK, listed.getFirst().authToken());
+    assertNull(listed.get(1).authToken());
+    assertEquals(McpController.TOKEN_MASK, ((UserMcpServerDto) saved).authToken());
+    assertEquals(McpController.TOKEN_MASK, platform.getFirst().authToken());
+  }
+
+  @Test
+  void anEditWithoutATokenKeepsTheStoredOne() {
+    // The client never holds the token any more, so an edit that sends none (or the mask) keeps it.
+    UUID userId = UUID.randomUUID();
+    User user = new User(userId, "test", "test@test.class", true, Set.of("ROLE_USER"), Map.of());
+    UserMcpServerDto stored =
+        new UserMcpServerDto(
+            1, userId.toString(), "S1", "https://s1", "token123", true, Instant.now(FIXED_CLOCK));
+    when(userMcpServerPersistenceProvider.findById(1)).thenReturn(Optional.of(stored));
+    when(userMcpServerPersistenceProvider.save(any())).thenAnswer(call -> call.getArgument(0));
+
+    mcpController.saveUserServer(
+        new UserMcpServerDto(
+            1, userId.toString(), "Renamed", "https://s1", McpController.TOKEN_MASK, true, null),
+        user);
+
+    verify(userMcpServerPersistenceProvider)
+        .save(argThat(dto -> "token123".equals(dto.authToken()) && "Renamed".equals(dto.label())));
+  }
+
+  @Test
   void saveUserServerUnauthorized() {
     UserMcpServerDto payload =
         new UserMcpServerDto(
@@ -196,7 +246,10 @@ class McpControllerTest {
     ResponseEntity<Object> response = mcpController.saveUserServer(payload, user);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(payload, response.getBody());
+    // The answer is the saved server with its token masked (orazaka-ai-engine#58).
+    UserMcpServerDto body = (UserMcpServerDto) response.getBody();
+    assertEquals(payload.label(), body.label());
+    assertEquals(McpController.TOKEN_MASK, body.authToken());
   }
 
   @Test
@@ -329,7 +382,9 @@ class McpControllerTest {
     ResponseEntity<Object> response = mcpController.savePlatformServer(payload);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(payload, response.getBody());
+    PlatformMcpServerDto body = (PlatformMcpServerDto) response.getBody();
+    assertEquals(payload.label(), body.label());
+    assertEquals(McpController.TOKEN_MASK, body.authToken());
   }
 
   @Test
