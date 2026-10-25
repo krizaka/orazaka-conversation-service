@@ -5,6 +5,7 @@ import com.krizaka.orazaka.core.application.pipeline.PipelineDisabledException;
 import com.krizaka.orazaka.core.application.pipeline.PipelineShortCircuitException;
 import com.krizaka.orazaka.studio.domain.exception.TurnConsentRequiredException;
 import com.krizaka.users.domain.exception.InvalidRequestException;
+import com.krizaka.web.correlation.CorrelationId;
 import com.krizaka.web.problem.ProblemDetailsAdvice;
 import java.util.HashMap;
 import java.util.List;
@@ -160,6 +161,27 @@ public class RestErrorResolver {
     return ResponseEntity.status(HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS)
         .contentType(MediaType.APPLICATION_JSON)
         .body(body);
+  }
+
+  /**
+   * Answers a law read that serves no text (issue #89) as Problem Details: the status the outcome
+   * stands for, {@code code} its slug, {@code outcome} its name. The detail is fixed text, never
+   * the article's.
+   *
+   * @param ex the refusal
+   * @return the problem
+   */
+  @ExceptionHandler(LawReadRefusal.class)
+  public ResponseEntity<ProblemDetail> handleLawReadRefusal(LawReadRefusal ex) {
+    logger.info("Law read answered {}", ex.outcome());
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
+    problem.setTitle(ex.code().replace('-', ' '));
+    problem.setProperty("code", ex.code());
+    problem.setProperty("outcome", ex.outcome());
+    problem.setProperty("requestId", CorrelationId.current());
+    return ResponseEntity.status(ex.status())
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .body(problem);
   }
 
   private static Map<String, Object> refusalBody(InsufficientCreditsException ex) {
