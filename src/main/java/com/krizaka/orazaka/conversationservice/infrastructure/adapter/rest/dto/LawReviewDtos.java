@@ -1,13 +1,6 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest.dto;
 
-import com.krizaka.orazaka.tools.domain.model.law.DerivationStarted;
-import com.krizaka.orazaka.tools.domain.model.law.GoldenCase;
-import com.krizaka.orazaka.tools.domain.model.law.GoldenCases;
-import com.krizaka.orazaka.tools.domain.model.law.ProposalStatus;
-import com.krizaka.orazaka.tools.domain.model.law.ProposedRule;
-import com.krizaka.orazaka.tools.domain.model.law.RuleProposal;
-import com.krizaka.orazaka.tools.domain.model.law.VetFinding;
-import com.krizaka.orazaka.tools.domain.model.law.VetReport;
+import com.krizaka.orazaka.tools.domain.model.law.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;

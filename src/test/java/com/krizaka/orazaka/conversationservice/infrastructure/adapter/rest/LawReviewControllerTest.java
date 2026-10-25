@@ -1,22 +1,9 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,20 +15,8 @@ import com.krizaka.orazaka.tools.application.service.LawManualImportService;
 import com.krizaka.orazaka.tools.application.service.RuleProposalReviewService;
 import com.krizaka.orazaka.tools.application.service.RuleProposalService;
 import com.krizaka.orazaka.tools.application.service.RulesetPromotionService;
-import com.krizaka.orazaka.tools.domain.model.law.GoldenCase;
-import com.krizaka.orazaka.tools.domain.model.law.GoldenCases;
-import com.krizaka.orazaka.tools.domain.model.law.KindDemand;
-import com.krizaka.orazaka.tools.domain.model.law.LawBlock;
-import com.krizaka.orazaka.tools.domain.model.law.LawReviewRefusal;
+import com.krizaka.orazaka.tools.domain.model.law.*;
 import com.krizaka.orazaka.tools.domain.model.law.LawReviewRefusal.Code;
-import com.krizaka.orazaka.tools.domain.model.law.LawWatchReport;
-import com.krizaka.orazaka.tools.domain.model.law.PromotionResult;
-import com.krizaka.orazaka.tools.domain.model.law.ProposalStatus;
-import com.krizaka.orazaka.tools.domain.model.law.ProposedRule;
-import com.krizaka.orazaka.tools.domain.model.law.RuleCheck;
-import com.krizaka.orazaka.tools.domain.model.law.RuleFixtures;
-import com.krizaka.orazaka.tools.domain.model.law.RuleProposal;
-import com.krizaka.orazaka.tools.domain.model.law.VetReport;
 import com.krizaka.users.domain.model.User;
 import com.krizaka.users.domain.port.UserDirectoryClient;
 import com.krizaka.web.KrizakaWebProperties;
@@ -573,8 +548,8 @@ class LawReviewControllerTest {
             org.mockito.ArgumentMatchers.argThat(
                 f ->
                     f.importedBy().equals(admin.toString())
-                        && f.jurisdiction().equals("QC")
-                        && f.sourceUrl().equals("https://www.donneesquebec.ca/ccq.xml")));
+                        && "QC".equals(f.jurisdiction())
+                        && "https://www.donneesquebec.ca/ccq.xml".equals(f.sourceUrl())));
   }
 
   @Test
