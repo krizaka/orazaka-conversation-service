@@ -173,6 +173,10 @@ public class SecurityConfig {
                     .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/embeddings")
                     .hasAnyAuthority(ADMIN, USER)
+                    // The law read API (#89): a person's session, or an oz_ key the edge
+                    // exchanged for one; never a bare service token.
+                    .requestMatchers("/api/v1/law/**")
+                    .hasAnyAuthority(ADMIN, USER)
                     .requestMatchers("/api/v1/intent/route")
                     .permitAll())
         .cors(Customizer.withDefaults())

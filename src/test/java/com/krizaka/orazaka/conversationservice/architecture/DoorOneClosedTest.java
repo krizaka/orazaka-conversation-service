@@ -102,4 +102,30 @@ class DoorOneClosedTest {
                 + " dispatch, durable with the state that describes it")
         .check(PRODUCTION_CLASSES);
   }
+
+  @Test
+  @DisplayName("[ADR-068, #89] the law reaches HTTP only through the metered, hash-checked read")
+  void lawTextReachesHttpOnlyThroughTheCheckedRead() {
+    // GET /api/v1/law/articles is a read through the door: one metered CALL, the article's hash
+    // checked against the one recorded with it. A controller that read the corpus itself, or
+    // called the lookup underneath the use case, would serve law text unmetered and unchecked.
+    noClasses()
+        .that()
+        .resideInAPackage("com.krizaka.orazaka.conversationservice..")
+        .should()
+        .dependOnClassesThat()
+        .areAssignableTo(com.krizaka.orazaka.tools.application.port.law.LawCorpusStore.class)
+        .orShould()
+        .dependOnClassesThat()
+        .areAssignableTo(
+            com.krizaka.orazaka.tools.application.service.LawStatuteLookupService.class)
+        .orShould()
+        .dependOnClassesThat()
+        .areAssignableTo(
+            com.krizaka.orazaka.tools.application.service.LawCorpusResearchService.class)
+        .because(
+            "law text leaves this service only through LawArticleReadService: asOf required,"
+                + " the hash checked (fail closed), one RESEARCH CALL metered (#89)")
+        .check(PRODUCTION_CLASSES);
+  }
 }
