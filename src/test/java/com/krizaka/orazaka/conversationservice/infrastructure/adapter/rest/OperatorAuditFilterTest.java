@@ -87,6 +87,29 @@ class OperatorAuditFilterTest {
   }
 
   @Test
+  void aMappedWriteIsAuditedByItsTemplateAndItsNamedTarget() throws Exception {
+    signedIn("admin-1", "ROLE_ADMIN");
+    var request =
+        new MockHttpServletRequest("POST", "/api/v1/admin/law/kinds/qc-visit-notice/promote");
+    request.setRequestURI("/api/v1/admin/law/kinds/qc-visit-notice/promote");
+    request.setAttribute(
+        org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,
+        "/api/v1/admin/law/kinds/{kindId}/promote");
+    request.setAttribute(
+        org.springframework.web.servlet.HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE,
+        java.util.Map.of("kindId", "qc-visit-notice"));
+
+    filter.doFilter(
+        request,
+        new MockHttpServletResponse(),
+        (req, res) -> ((MockHttpServletResponse) res).setStatus(409));
+
+    assertThat(lines.getFirst().action()).isEqualTo("POST /api/v1/admin/law/kinds/{id}/promote");
+    assertThat(lines.getFirst().targetId()).isEqualTo("qc-visit-notice");
+    assertThat(lines.getFirst().outcome()).isEqualTo("refused");
+  }
+
+  @Test
   void aRefusedOrFailedWriteIsAuditedWithItsOutcome() throws Exception {
     signedIn("admin-1", "ROLE_ADMIN");
     call("DELETE", "/api/v1/models/x", 409);

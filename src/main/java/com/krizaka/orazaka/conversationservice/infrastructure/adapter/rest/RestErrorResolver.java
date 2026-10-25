@@ -5,6 +5,7 @@ import com.krizaka.orazaka.core.application.pipeline.PipelineDisabledException;
 import com.krizaka.orazaka.core.application.pipeline.PipelineShortCircuitException;
 import com.krizaka.orazaka.studio.domain.exception.TurnConsentRequiredException;
 import com.krizaka.users.domain.exception.InvalidRequestException;
+import com.krizaka.web.correlation.CorrelationId;
 import com.krizaka.web.problem.ProblemDetailsAdvice;
 import java.util.HashMap;
 import java.util.List;
@@ -69,6 +70,25 @@ public class RestErrorResolver {
   public ProblemDetail handleInvalidRequest(InvalidRequestException ex) {
     logger.warn("REST {} intercepted: {}", ex.getClass().getSimpleName(), ex.getMessage());
     return problems.onDomain(new InvalidRequestProblem(ex.getMessage()));
+  }
+
+  /**
+   * Answers a refusal of the law review queue (ADR-089 §8) as Problem Details: its status, {@code
+   * code} its slug, and the request id.
+   *
+   * @param ex the refusal
+   * @return the problem
+   */
+  @ExceptionHandler(LawReviewProblem.class)
+  public ResponseEntity<ProblemDetail> handleLawReview(LawReviewProblem ex) {
+    logger.info("Law review refused: {}", ex.code());
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
+    problem.setTitle(ex.code().replace('-', ' '));
+    problem.setProperty("code", ex.code());
+    problem.setProperty("requestId", CorrelationId.current());
+    return ResponseEntity.status(ex.status())
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .body(problem);
   }
 
   /**

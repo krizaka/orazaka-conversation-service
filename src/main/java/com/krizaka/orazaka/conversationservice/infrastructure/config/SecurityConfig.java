@@ -137,6 +137,9 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/api/v1/admin/app-config/**")
                     .hasAuthority(ADMIN)
+                    // The law review queue (ADR-089 §8): proposals, promotion, corpus, demand.
+                    .requestMatchers("/api/v1/admin/law/**")
+                    .hasAuthority(ADMIN)
                     .requestMatchers("/api/v1/auth/login")
                     .permitAll()
                     .requestMatchers("/api/v1/auth/register")
