@@ -91,6 +91,15 @@ orazaka:
   # orazaka-job-service through the same variable.
   jobs:
     execution-timeout: ${JOBS_TIMEOUT_SECONDS:1800}
+  # ADR-089 §5: a promotion opens its orazaka-packs pull request as the GitHub App (krizaka-agents), with
+  # installation tokens minted from the App's id and private key: never a personal token. Off by default
+  # (503 law-promotion-off).
+  law:
+    promotion:
+      enabled: ${AI_LAW_PROMOTION_ENABLED:false}
+      app-id: ${APP_GITHUB_AGENTS_APP_ID:}
+      installation-id: ${APP_GITHUB_AGENTS_INSTALLATION_ID:}
+      private-key: ${APP_GITHUB_AGENTS_PRIVATE_KEY:}
   router:
     # Where uploads are written and served from (AssetController resolves the owner first).
     uploads:

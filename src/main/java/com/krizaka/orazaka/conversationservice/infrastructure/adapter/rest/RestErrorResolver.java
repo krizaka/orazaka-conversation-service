@@ -73,6 +73,25 @@ public class RestErrorResolver {
   }
 
   /**
+   * Answers a refusal of the law review queue (ADR-089 §8) as Problem Details: its status, {@code
+   * code} its slug, and the request id.
+   *
+   * @param ex the refusal
+   * @return the problem
+   */
+  @ExceptionHandler(LawReviewProblem.class)
+  public ResponseEntity<ProblemDetail> handleLawReview(LawReviewProblem ex) {
+    logger.info("Law review refused: {}", ex.code());
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
+    problem.setTitle(ex.code().replace('-', ' '));
+    problem.setProperty("code", ex.code());
+    problem.setProperty("requestId", CorrelationId.current());
+    return ResponseEntity.status(ex.status())
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .body(problem);
+  }
+
+  /**
    * Relays a credit refusal taken at submission as the structured 402 of the billing design (§6.1).
    *
    * <p>Every field is carried from the ledger's own refusal rather than re-derived: the paywall
