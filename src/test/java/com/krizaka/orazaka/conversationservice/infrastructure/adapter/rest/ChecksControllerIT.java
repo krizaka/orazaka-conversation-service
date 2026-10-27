@@ -273,10 +273,14 @@ class ChecksControllerIT extends AbstractContainerIntegrationTest {
     CheckMeter.Hold hold =
         new CheckMeter.Hold() {
           @Override
-          public void settle() {}
+          public void settle() {
+            // the test meters nothing: no hold to settle
+          }
 
           @Override
-          public void release(String reason) {}
+          public void release(String reason) {
+            // the test meters nothing: no hold to release
+          }
         };
     ProductCheckService service =
         new ProductCheckService(
