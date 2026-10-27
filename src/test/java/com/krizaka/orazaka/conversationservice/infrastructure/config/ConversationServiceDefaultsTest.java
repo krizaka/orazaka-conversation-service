@@ -33,6 +33,17 @@ class ConversationServiceDefaultsTest {
   }
 
   @Test
+  void aStreamNeverPinsAPersistenceContextOrAConnection() {
+    StandardEnvironment environment = withDefaults(Map.of());
+
+    // Open-session-in-view keeps the EntityManager (and any connection a non-transactional read
+    // took) until the request completes: for an SSE stream, minutes. #10: the pool saturated.
+    assertThat(environment.getProperty("spring.jpa.open-in-view")).isEqualTo("false");
+    assertThat(environment.getProperty("spring.datasource.hikari.leak-detection-threshold"))
+        .isNotBlank();
+  }
+
+  @Test
   void everyOtherSourceWins() {
     StandardEnvironment environment =
         withDefaults(Map.of("spring.rabbitmq.listener.simple.prefetch", "5"));

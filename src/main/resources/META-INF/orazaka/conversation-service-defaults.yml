@@ -11,6 +11,11 @@
 # ==============================================================================
 
 spring:
+  jpa:
+    # A stream (SSE) must not pin a persistence context for its whole life: with the default (true)
+    # a connection taken by a non-transactional read stays out of the pool until the stream ends
+    # (orazaka-conversation-service#10).
+    open-in-view: false
   datasource:
     hikari:
       maximum-pool-size: 10

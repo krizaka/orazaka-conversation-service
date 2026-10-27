@@ -1,5 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import com.krizaka.orazaka.core.domain.model.security.AccessDeniedException;
+import com.krizaka.orazaka.core.domain.model.security.Actor;
 import com.krizaka.orazaka.core.domain.ports.inbound.McpService;
 import com.krizaka.orazaka.persistence.domain.model.PlatformMcpServerDto;
 import com.krizaka.orazaka.persistence.domain.model.UserMcpServerDto;
@@ -58,39 +60,54 @@ public class McpController {
   }
 
   /**
-   * Retrieves all registered tools and their schemas.
+   * Retrieves the registered tools the caller may use, with their schemas. A tool the caller may
+   * not use is absent, not merely refused (ADR-091).
    *
+   * @param user The authenticated caller; the actor is built from the session, never from the
+   *     request.
    * @return A list of ToolInfoDto objects.
    */
   @GetMapping("/tools")
-  public ResponseEntity<@NotNull List<ToolInfoDto>> getTools() {
+  public ResponseEntity<@NotNull List<ToolInfoDto>> getTools(@AuthenticationPrincipal User user) {
     List<ToolInfoDto> tools =
-        mcpService.getAvailableTools().stream()
+        mcpService.getAvailableTools(actorOf(user)).stream()
             .map(tool -> new ToolInfoDto(tool.name(), tool.description(), tool.inputSchema()))
             .toList();
     return ResponseEntity.ok(tools);
   }
 
   /**
-   * Executes a tool by name with the provided arguments.
+   * Executes a tool by name with the provided arguments, for the authenticated caller: a tool the
+   * caller may not use answers 403 and leaves an audit line (ADR-091).
    *
    * @param name The name of the tool.
    * @param payload The arguments map.
+   * @param user The authenticated caller.
    * @return A response entity containing the result or error.
    */
   @PostMapping("/tools/{name}/execute")
   public ResponseEntity<@NotNull Map<String, Object>> executeTool(
-      @PathVariable String name, @RequestBody Map<String, Object> payload) {
+      @PathVariable String name,
+      @RequestBody Map<String, Object> payload,
+      @AuthenticationPrincipal User user) {
     try {
       String jsonInput = objectMapper.writeValueAsString(payload);
-      String result = mcpService.executeTool(name, jsonInput);
+      String result = mcpService.executeTool(actorOf(user), name, jsonInput);
       return ResponseEntity.ok(Map.of("result", result));
+    } catch (AccessDeniedException e) {
+      // The reason is in the audit line; the answer says only that it is refused.
+      return ResponseEntity.status(403).build();
     } catch (IllegalArgumentException e) {
       return ResponseEntity.notFound().build();
     } catch (JacksonException e) {
       return ResponseEntity.badRequest()
           .body(Map.of("error", "Invalid payload: " + e.getMessage()));
     }
+  }
+
+  /** The actor of the session: none for a caller that is not a signed-in user. */
+  private static Actor actorOf(User user) {
+    return user == null ? null : Actor.of(user.id().toString(), user.authorities()).orElse(null);
   }
 
   @GetMapping("/servers/user")

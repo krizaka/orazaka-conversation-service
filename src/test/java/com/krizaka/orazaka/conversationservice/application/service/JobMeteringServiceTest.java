@@ -43,6 +43,7 @@ class JobMeteringServiceTest {
     billsAs("orazaka.core.media.speech", "AUDIO");
     billsAs("orazaka.core.media.audio.analysis", "AUDIO");
     billsAs("orazaka.core.media.video.analysis", "VIDEO");
+    billsAs("orazaka.screening.plan", "NONE");
   }
 
   private void billsAs(String featureKey, String billableCapability) {
@@ -222,5 +223,16 @@ class JobMeteringServiceTest {
   @Test
   void nullMessage_throws() {
     assertThrows(NullPointerException.class, () -> service().authorize(null));
+  }
+
+  @Test
+  void aCapabilityDeclaredNone_isNotMeteredAndTakesNoHold() {
+    JobCommand message =
+        new JobCommand("job-none", ACTOR, "orazaka.screening.plan", Map.of("p", "x"));
+
+    JobCommand authorized = service().authorize(message);
+
+    assertSame(message, authorized);
+    verifyNoInteractions(creditAuthorizationClient, unmeteredTurns);
   }
 }

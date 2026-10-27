@@ -103,11 +103,22 @@ class MediaAnalysisControllerTest {
   }
 
   @Test
-  void searchRag_returnsContext() {
-    when(knowledgeService.retrieveContext("cats", 5)).thenReturn("ctx-about-cats");
-    ResponseEntity<Map<String, Object>> response = controller.searchRag("cats");
+  void searchRag_returnsContextForTheCaller() {
+    UUID id = UUID.randomUUID();
+    var actor =
+        com.krizaka.orazaka.core.domain.model.security.Actor.of(id.toString(), Set.of("ROLE_USER"))
+            .orElseThrow();
+    when(knowledgeService.retrieveContext(actor, "cats", 5)).thenReturn("ctx-about-cats");
+    ResponseEntity<Map<String, Object>> response = controller.searchRag("cats", user(id));
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals("ctx-about-cats", response.getBody().get("context"));
+  }
+
+  @Test
+  void searchRag_withoutASignedInUserIsUnauthorizedAndReadsNothing() {
+    ResponseEntity<Map<String, Object>> response = controller.searchRag("cats", null);
+    assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    org.mockito.Mockito.verifyNoInteractions(knowledgeService);
   }
 
   @Test

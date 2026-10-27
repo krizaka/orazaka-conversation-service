@@ -12,6 +12,7 @@ import com.krizaka.orazaka.jobs.domain.model.JobCommand;
 import com.krizaka.orazaka.persistence.domain.ports.inbound.CapabilityManager;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,9 @@ public class JobMeteringService {
 
   /** Let the billing service price the hold from its pricebook. */
   private static final long PRICED_BY_BILLING = 0L;
+
+  /** What a route declares when its step is not billable on its own (orazaka-packs#162). */
+  private static final String NOT_BILLABLE = "NONE";
 
   private final CreditAuthorizationClient creditAuthorizationClient;
   private final CapabilityManager capabilityManager;
@@ -68,13 +72,20 @@ public class JobMeteringService {
       return message;
     }
 
+    BillableCapability capability = capabilityOf(message.featureKey());
+    if (capability == null) {
+      // Declared NONE (orazaka-packs#162): a step that is not billable on its own. No hold to take
+      // and nothing to reconcile later, so it is neither metered nor recorded as an unmetered turn.
+      return message;
+    }
+
     CreditHoldResponse hold;
     try {
       hold =
           creditAuthorizationClient.hold(
               new CreditHoldCommand(
                   message.userId(),
-                  capabilityOf(message.featureKey()),
+                  capability,
                   message.resolvedModel(),
                   // Nothing wider exists at submission: a single job is its own correlation, and
                   // the §6.5 roll-up still aggregates on this key when a workflow supplies one.
@@ -93,7 +104,7 @@ public class JobMeteringService {
       unmeteredTurns.record(
           new UnmeteredTurn(
               message.userId(),
-              capabilityOf(message.featureKey()),
+              capability,
               message.jobId(),
               "billing unreachable: " + e.getClass().getSimpleName(),
               Instant.now()));
@@ -126,23 +137,24 @@ public class JobMeteringService {
    * it did not recognise. Deliberately a fallback and not a refusal, unlike routing: mispricing a
    * job is a margin error, whereas refusing to meter it would block a submission the platform is
    * otherwise able to serve. Routing has no such safe default, which is why it has none.
+   *
+   * @return what the row bills as, or {@code null} when it declares {@code NONE}: not billable on
+   *     its own, so there is nothing to hold ({@code NONE} is not a {@link BillableCapability})
    */
   private BillableCapability capabilityOf(String featureKey) {
     if (featureKey == null) {
       return BillableCapability.CHAT;
     }
-    return capabilityManager
-        .findByFeatureKey(featureKey)
-        .map(CapabilityDeclaration::billableCapability)
-        .map(JobMeteringService::parse)
-        .orElseGet(
-            () -> {
-              logger.warn(
-                  "No capability row for feature key {} — pricing it as {}",
-                  featureKey,
-                  BillableCapability.CHAT);
-              return BillableCapability.CHAT;
-            });
+    Optional<CapabilityDeclaration> row = capabilityManager.findByFeatureKey(featureKey);
+    if (row.isEmpty()) {
+      logger.warn(
+          "No capability row for feature key {} — pricing it as {}",
+          featureKey,
+          BillableCapability.CHAT);
+      return BillableCapability.CHAT;
+    }
+    String billable = row.get().billableCapability();
+    return NOT_BILLABLE.equals(billable) ? null : parse(billable);
   }
 
   /**

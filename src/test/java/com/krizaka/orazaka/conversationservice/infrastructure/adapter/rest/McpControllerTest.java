@@ -24,6 +24,19 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 class McpControllerTest {
+  private static final User USER =
+      new User(
+          java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"),
+          "emp",
+          "emp@example.com",
+          true,
+          java.util.Set.of("ROLE_USER"),
+          Map.of(),
+          List.of());
+  private static final com.krizaka.orazaka.core.domain.model.security.Actor ACTOR =
+      com.krizaka.orazaka.core.domain.model.security.Actor.of(
+              USER.id().toString(), USER.authorities())
+          .orElseThrow();
   private static final java.time.Clock FIXED_CLOCK =
       java.time.Clock.fixed(
           java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
@@ -51,9 +64,9 @@ class McpControllerTest {
   @Test
   void getTools() {
     McpToolInfo tool = new McpToolInfo("search", "Search engine", "{}");
-    when(mcpService.getAvailableTools()).thenReturn(List.of(tool));
+    when(mcpService.getAvailableTools(ACTOR)).thenReturn(List.of(tool));
 
-    ResponseEntity<List<McpController.ToolInfoDto>> response = mcpController.getTools();
+    ResponseEntity<List<McpController.ToolInfoDto>> response = mcpController.getTools(USER);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertNotNull(response.getBody());
@@ -65,10 +78,10 @@ class McpControllerTest {
 
   @Test
   void executeToolSuccess() {
-    when(mcpService.executeTool("search", "{\"query\":\"test\"}")).thenReturn("results");
+    when(mcpService.executeTool(ACTOR, "search", "{\"query\":\"test\"}")).thenReturn("results");
 
     ResponseEntity<Map<String, Object>> response =
-        mcpController.executeTool("search", Map.of("query", "test"));
+        mcpController.executeTool("search", Map.of("query", "test"), USER);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertNotNull(response.getBody());
@@ -77,13 +90,44 @@ class McpControllerTest {
 
   @Test
   void executeToolNotFound() {
-    when(mcpService.executeTool(eq("search"), anyString()))
+    when(mcpService.executeTool(eq(ACTOR), eq("search"), anyString()))
         .thenThrow(new IllegalArgumentException("Not found"));
 
     ResponseEntity<Map<String, Object>> response =
-        mcpController.executeTool("search", Map.of("query", "test"));
+        mcpController.executeTool("search", Map.of("query", "test"), USER);
 
     assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+  }
+
+  @Test
+  void executeToolRefusedForACallerWithoutTheRoleIs403() {
+    when(mcpService.executeTool(eq(ACTOR), eq("payroll"), anyString()))
+        .thenThrow(
+            new com.krizaka.orazaka.core.domain.model.security.AccessDeniedException(
+                "payroll",
+                com.krizaka.orazaka.core.domain.model.security.AccessDeniedException.Reason
+                    .MISSING_ROLE));
+
+    ResponseEntity<Map<String, Object>> response =
+        mcpController.executeTool("payroll", Map.of(), USER);
+
+    assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    assertNull(response.getBody());
+  }
+
+  @Test
+  void aCallerThatIsNotASignedInUserActsForNobody() {
+    when(mcpService.getAvailableTools(null)).thenReturn(List.of());
+    when(mcpService.executeTool(eq(null), eq("search"), anyString()))
+        .thenThrow(
+            new com.krizaka.orazaka.core.domain.model.security.AccessDeniedException(
+                "search",
+                com.krizaka.orazaka.core.domain.model.security.AccessDeniedException.Reason
+                    .NO_ACTOR));
+
+    assertEquals(0, mcpController.getTools(null).getBody().size());
+    assertEquals(
+        HttpStatus.FORBIDDEN, mcpController.executeTool("search", Map.of(), null).getStatusCode());
   }
 
   @Test
@@ -99,7 +143,7 @@ class McpControllerTest {
             badMapper);
 
     ResponseEntity<Map<String, Object>> response =
-        controllerWithBadMapper.executeTool("search", Map.of("query", "test"));
+        controllerWithBadMapper.executeTool("search", Map.of("query", "test"), USER);
 
     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     assertTrue(response.getBody().containsKey("error"));

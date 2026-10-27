@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.krizaka.orazaka.conversationservice.domain.port.ProtectedConversationStore;
 import com.krizaka.orazaka.conversationservice.domain.port.ProtectedConversationStore.Erased;
+import com.krizaka.orazaka.test.AbstractContainerIntegrationTest;
 import com.krizaka.orazaka.test.architecture.SqlBoundaryRules;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,17 +12,17 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 /**
  * The memory of a regulated pack's voice and listening turns is erased on request and ages out
@@ -30,21 +31,20 @@ import org.testcontainers.utility.DockerImageName;
  * <p>The proof is not a list of tables that happen to be checked: the person's words are searched
  * for in <b>every table of the schema</b>.
  */
-class ProtectedConversationIT {
+@SpringJUnitConfig(ProtectedConversationIT.NoBeans.class)
+class ProtectedConversationIT extends AbstractContainerIntegrationTest {
+
+  /** The shared base wires the container's ports into the Environment; no bean is needed. */
+  @Configuration
+  static class NoBeans {}
+
+  @Autowired private Environment environment;
 
   private static final String ERIC = "550e8400-e29b-41d4-a716-446655440099";
   private static final String OTHER = "550e8400-e29b-41d4-a716-446655440100";
   private static final String WORDS = "je n'arrive plus a dormir depuis la separation";
   private static final String OTHER_WORDS = "des mots qui ne sont pas a eric";
   private static final String CHAT_WORDS = "une question ordinaire sur la meteo";
-
-  @SuppressWarnings("resource")
-  private static final PostgreSQLContainer<?> POSTGRES =
-      new PostgreSQLContainer<>(
-              DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))
-          .withDatabaseName("orazaka_db")
-          .withUsername("postgres")
-          .withPassword("postgres");
 
   /** The chat tables and the protected index, out of the real initdb file (not the whole file). */
   private static final Pattern DDL =
@@ -57,16 +57,19 @@ class ProtectedConversationIT {
   private static JdbcTemplate jdbc;
   private static ProtectedConversationStore service;
 
-  @BeforeAll
-  static void start() throws IOException {
-    if (System.getProperty("api.version") == null && System.getenv("DOCKER_API_VERSION") == null) {
-      System.setProperty("api.version", "1.43");
+  private void start() throws IOException {
+    if (service != null) {
+      return;
     }
-    POSTGRES.start();
     dataSource =
         new DriverManagerDataSource(
-            POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+            environment.getRequiredProperty("spring.datasource.url"),
+            environment.getRequiredProperty("spring.datasource.username"),
+            environment.getRequiredProperty("spring.datasource.password"));
     jdbc = new JdbcTemplate(dataSource);
+    jdbc.execute(
+        "DROP TABLE IF EXISTS orazaka_chat_messages, orazaka_chat_sessions,"
+            + " orazaka_protected_conversation CASCADE");
     Path initDb = conversationInitDb();
     Matcher statement = DDL.matcher(Files.readString(initDb));
     int executed = 0;
@@ -85,13 +88,9 @@ class ProtectedConversationIT {
     return SqlBoundaryRules.locateInitDb(dir).resolve("20-conversation.sql");
   }
 
-  @AfterAll
-  static void stop() {
-    POSTGRES.stop();
-  }
-
   @BeforeEach
-  void clean() {
+  void clean() throws IOException {
+    start();
     jdbc.update("DELETE FROM orazaka_chat_messages");
     jdbc.update("DELETE FROM orazaka_chat_sessions");
     jdbc.update("DELETE FROM orazaka_protected_conversation");
