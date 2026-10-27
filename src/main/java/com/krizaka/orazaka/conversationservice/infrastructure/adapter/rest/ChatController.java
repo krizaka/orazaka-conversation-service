@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -178,8 +179,7 @@ public class ChatController {
     // sources emit inside subscribe()).
     Disposable.Swap upstream = Disposables.swap();
     // One id per event ("<conversation>:<n>"): a repeated id would break Last-Event-ID resumption.
-    java.util.concurrent.atomic.AtomicLong chunkIndex =
-        new java.util.concurrent.atomic.AtomicLong();
+    AtomicLong chunkIndex = new AtomicLong();
     Runnable cleanup =
         () -> {
           upstream.dispose();
@@ -261,7 +261,7 @@ public class ChatController {
       String conversationId,
       String pipelineId,
       String prompt,
-      java.util.concurrent.atomic.AtomicLong chunkIndex) {
+      AtomicLong chunkIndex) {
     try {
       AdvancedPipelineSchema schema = pipelineExecutor.buildSchema(pipelineId, prompt);
       emitter.send(
