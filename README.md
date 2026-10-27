@@ -30,7 +30,7 @@ part of the [Orazaka platform](https://github.com/krizaka/orazaka) by [Krizaka](
 ## What it provides
 
 The interactive ingress (port `8080`, behind the edge): `/api/v1/chat` (SSE streaming),
-`/api/v1/intent`, `/api/v1/models`, `/api/v1/pipeline`, `/api/v1/mcp`, `/api/v1/jobs`,
+`/api/v1/intent`, `/api/v1/models`, `/api/v1/pipeline`, `/api/v1/mcp`, `/api/v1/checks` (court records and credit for products, orazaka-ai-engine#105), `/api/v1/jobs`,
 `/api/v1/features`, `/api/v1/media`, `/api/v1/assets`, `/api/v1/status`.
 It translates transport into an `Intention` and enforces security — **no business logic**.
 Owns `infra/initdb/20-conversation.sql`.
