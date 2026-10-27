@@ -103,9 +103,9 @@ class StreamPoolLeakIT extends AbstractContainerIntegrationTest {
         .forEach(
             listener -> {
               try {
-                if (kind.equals("timeout")) {
+                if ("timeout".equals(kind)) {
                   listener.onTimeout(event);
-                } else if (kind.equals("transport-error")) {
+                } else if ("transport-error".equals(kind)) {
                   listener.onError(event);
                 }
               } catch (java.io.IOException | RuntimeException ignored) {
