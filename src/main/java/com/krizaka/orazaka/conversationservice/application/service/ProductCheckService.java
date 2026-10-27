@@ -71,37 +71,16 @@ public class ProductCheckService implements ProductChecks {
     this.clock = Objects.requireNonNull(clock, "clock must not be null");
   }
 
-  /**
-   * Whether the actor may use the door at all.
-   *
-   * @param actor the verified actor
-   * @return {@code true} when it holds one of the allowed roles
-   */
   @Override
   public boolean permits(Actor actor) {
     return actor.holdsAny(allowedRoles);
   }
 
-  /**
-   * The seconds the actor must wait, taking one call of its window.
-   *
-   * @param actor the verified actor
-   * @return {@code 0} when it may go on
-   */
   @Override
   public long throttle(Actor actor) {
     return limiter.tryAcquire(actor.tenant() + "/" + actor.subject());
   }
 
-  /**
-   * Starts a check.
-   *
-   * @param actor the verified actor
-   * @param purpose court records or credit
-   * @param call the subject and the run
-   * @param consented the caller's statement that the subject consented to this purpose
-   * @return the closed result
-   */
   @Override
   public CheckResult submit(Actor actor, CheckPurpose purpose, CheckCall call, boolean consented) {
     ExternalCheckService door = door(actor, purpose, call.subject().subjectId(), consented);
@@ -115,15 +94,6 @@ public class ProductCheckService implements ProductChecks {
     }
   }
 
-  /**
-   * Collects a pending check, if the tenant submitted it.
-   *
-   * @param actor the verified actor
-   * @param providerRef the reference a submission answered
-   * @param subjectId the opaque id of the subject the check was for
-   * @param consented the caller's statement that the consent still stands
-   * @return the answer, empty when the tenant never received this reference
-   */
   @Override
   public Optional<Collected> collect(
       Actor actor, String providerRef, String subjectId, boolean consented) {

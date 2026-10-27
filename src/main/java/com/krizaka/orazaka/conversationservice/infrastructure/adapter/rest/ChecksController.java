@@ -14,6 +14,8 @@ import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,8 +37,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/checks")
 public class ChecksController {
 
-  /** The access audit of ADR-091: who was refused, never what was asked. */
-  private static final Logger ACCESS_AUDIT = LoggerFactory.getLogger("orazaka.audit.access");
+  /**
+   * The access audit of ADR-091 (marker {@code ACCESS_AUDIT}): who was refused, never what was
+   * asked.
+   */
+  private static final Logger ACCESS_AUDIT = LoggerFactory.getLogger(ChecksController.class);
+
+  private static final Marker ACCESS = MarkerFactory.getMarker("ACCESS_AUDIT");
 
   private static final Map<String, CheckPurpose> PURPOSES =
       Map.of("court-records", CheckPurpose.COURT_RECORDS, "credit", CheckPurpose.CREDIT);
@@ -129,6 +136,7 @@ public class ChecksController {
     }
     if (!checks.permits(actor)) {
       ACCESS_AUDIT.warn(
+          ACCESS,
           "checks refused tenant={} subject={} reason=MISSING_ROLE",
           actor.tenant(),
           actor.subject());
@@ -137,7 +145,10 @@ public class ChecksController {
     long wait = checks.throttle(actor);
     if (wait > 0) {
       ACCESS_AUDIT.warn(
-          "checks refused tenant={} subject={} reason=RATE_LIMIT", actor.tenant(), actor.subject());
+          ACCESS,
+          "checks refused tenant={} subject={} reason=RATE_LIMIT",
+          actor.tenant(),
+          actor.subject());
       return ResponseEntity.status(429).header("Retry-After", Long.toString(wait)).build();
     }
     return null;
