@@ -19,6 +19,7 @@ import com.krizaka.orazaka.core.domain.model.checks.CheckRequest;
 import com.krizaka.orazaka.core.domain.model.checks.CheckResult;
 import com.krizaka.orazaka.core.domain.ports.outbound.CheckMeter;
 import com.krizaka.orazaka.core.domain.ports.outbound.ExternalCheckConnector;
+import com.krizaka.orazaka.test.AbstractContainerIntegrationTest;
 import com.krizaka.users.domain.model.User;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,11 +30,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -42,10 +45,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 /**
  * {@code /api/v1/checks} (orazaka-ai-engine#105) over the real DDL of the audit: with and without a
@@ -54,9 +56,16 @@ import org.testcontainers.utility.DockerImageName;
  *
  * <p>The engine's one door is real; the provider is a fake that answers PENDING then MATCH, so the
  * deferred path is proved without a network. Standalone MockMvc as the other controller tests of
- * this service, with one Postgres container for the audit.
+ * this service, on the shared singleton Postgres of {@link AbstractContainerIntegrationTest}.
  */
-class ChecksControllerIT {
+@SpringJUnitConfig(ChecksControllerIT.NoBeans.class)
+class ChecksControllerIT extends AbstractContainerIntegrationTest {
+
+  /** The shared base wires the container's ports into the Environment; no bean is needed. */
+  @Configuration
+  static class NoBeans {}
+
+  @Autowired private Environment environment;
 
   private static final String MARIE = "11111111-1111-4111-8111-111111111111";
   private static final String PAUL = "22222222-2222-4222-8222-222222222222";
@@ -65,14 +74,6 @@ class ChecksControllerIT {
       """
       {"subjectId":"tenant-42","lastName":"Tremblay","firstName":"Ariane",
        "birthDate":"1990-04-12","region":"QC","consented":%s}""";
-
-  @SuppressWarnings("resource")
-  private static final PostgreSQLContainer<?> POSTGRES =
-      new PostgreSQLContainer<>(
-              DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))
-          .withDatabaseName("orazaka_db")
-          .withUsername("postgres")
-          .withPassword("postgres");
 
   private static JdbcTemplate jdbc;
 
@@ -105,22 +106,19 @@ class ChecksControllerIT {
         }
       };
 
-  @BeforeAll
-  static void start() throws Exception {
-    if (System.getProperty("api.version") == null && System.getenv("DOCKER_API_VERSION") == null) {
-      System.setProperty("api.version", "1.43");
+  @BeforeEach
+  void start() throws Exception {
+    if (jdbc != null) {
+      return;
     }
-    POSTGRES.start();
     jdbc =
         new JdbcTemplate(
             new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+                environment.getRequiredProperty("spring.datasource.url"),
+                environment.getRequiredProperty("spring.datasource.username"),
+                environment.getRequiredProperty("spring.datasource.password")));
+    jdbc.execute("DROP TABLE IF EXISTS external_check_audit");
     jdbc.execute(Files.readString(Path.of("infra/migrations/2026-10-27-product-checks-door.sql")));
-  }
-
-  @AfterAll
-  static void stop() {
-    POSTGRES.stop();
   }
 
   @AfterEach
