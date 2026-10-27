@@ -6,6 +6,7 @@ import com.krizaka.orazaka.assets.domain.port.DurableAssetStore;
 import com.krizaka.orazaka.assets.infrastructure.config.MediaStorageProperties;
 import com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest.dto.UploadAssetResponse;
 import com.krizaka.orazaka.conversationservice.infrastructure.support.PathResolver;
+import com.krizaka.orazaka.core.domain.model.security.Actor;
 import com.krizaka.orazaka.core.domain.ports.outbound.KnowledgeService;
 import com.krizaka.users.domain.model.User;
 import java.io.IOException;
@@ -71,10 +72,19 @@ public class MediaAnalysisController {
     this.encryptedAssetService = encryptedAssetService;
   }
 
-  /** Performs a passive RAG context search against the semantic index. */
+  /**
+   * Performs a passive RAG context search against the semantic index, among what the caller may
+   * read: the actor is built from the session, and a caller without one gets 401 (ADR-091).
+   */
   @GetMapping("/search")
-  public ResponseEntity<@NotNull Map<String, Object>> searchRag(@RequestParam("q") String query) {
-    String context = knowledgeService.retrieveContext(query, 5);
+  public ResponseEntity<@NotNull Map<String, Object>> searchRag(
+      @RequestParam("q") String query, @AuthenticationPrincipal User user) {
+    Actor actor =
+        user == null ? null : Actor.of(user.id().toString(), user.authorities()).orElse(null);
+    if (actor == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    String context = knowledgeService.retrieveContext(actor, query, 5);
     return ResponseEntity.ok(Map.of("context", context));
   }
 
