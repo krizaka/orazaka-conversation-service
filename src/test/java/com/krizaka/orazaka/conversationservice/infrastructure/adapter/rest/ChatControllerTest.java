@@ -84,10 +84,54 @@ class ChatControllerTest {
 
     when(aiClient.stream(any(ChatRequest.class))).thenReturn(Flux.fromIterable(responses));
 
-    SseEmitter result = controller.streamChat("conv-123", "prompt", mockUser);
+    SseEmitter result =
+        controller.streamChatPost(
+            "conv-123",
+            new ChatStreamRequest("prompt", List.of(), null, null, null, null, "default"),
+            mockUser);
 
     assertThat(result).isSameAs(mockEmitter);
     verify(mockEmitter, times(5)).send(any(SseEmitter.SseEventBuilder.class));
+  }
+
+  // ── orazaka-conversation-service#19: no prompt in the URL; every event has its own id ──
+
+  @Test
+  void theStreamHasNoGetRouteAndNoPromptInTheQueryString() {
+    for (var method : ChatController.class.getDeclaredMethods()) {
+      assertThat(
+              method.isAnnotationPresent(org.springframework.web.bind.annotation.GetMapping.class)
+                  && method.getName().startsWith("stream"))
+          .as(
+              "%s must not be a GET (a prompt in the URL reaches logs and proxies)",
+              method.getName())
+          .isFalse();
+    }
+  }
+
+  @Test
+  void everyMessageEventCarriesADistinctIdSoLastEventIdResumes() throws IOException {
+    when(aiClient.stream(any(ChatRequest.class)))
+        .thenReturn(
+            Flux.just(
+                new ChatResponse("a", "conv-123", Map.of()),
+                new ChatResponse("b", "conv-123", Map.of()),
+                new ChatResponse("c", "conv-123", Map.of())));
+
+    controller.streamChatPost(
+        "conv-123",
+        new ChatStreamRequest("prompt", List.of(), null, null, null, null, "default"),
+        Persona.freeUser());
+
+    var sent = org.mockito.ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+    verify(mockEmitter, atLeast(3)).send(sent.capture());
+    var ids =
+        sent.getAllValues().stream()
+            .flatMap(b -> b.build().stream())
+            .map(d -> String.valueOf(d.getData()))
+            .filter(text -> text.startsWith("id:"))
+            .toList();
+    assertThat(ids).hasSize(4).doesNotHaveDuplicates(); // the pipeline ack and three tokens
   }
 
   @Test
@@ -122,6 +166,10 @@ class ChatControllerTest {
   }
 
   // ── orazaka-conversation-service#17: a session is its owner's — BOLA/IDOR ──
+
+  private static ChatStreamRequest post(String prompt) {
+    return new ChatStreamRequest(prompt, List.of(), null, null, null, null, "default");
+  }
 
   private static User userNamed(String name) {
     return new User(
@@ -230,7 +278,7 @@ class ChatControllerTest {
 
     org.junit.jupiter.api.Assertions.assertThrows(
         com.krizaka.web.problem.NotFoundException.class,
-        () -> controller.streamChat("sess-a", "hi", bob));
+        () -> controller.streamChatPost("sess-a", post("hi"), bob));
     org.junit.jupiter.api.Assertions.assertThrows(
         com.krizaka.web.problem.NotFoundException.class,
         () ->
@@ -247,7 +295,7 @@ class ChatControllerTest {
     var bob = userNamed("bob");
     when(aiClient.stream(any(ChatRequest.class))).thenReturn(Flux.empty());
 
-    controller.streamChat("fresh", "hi", bob);
+    controller.streamChatPost("fresh", post("hi"), bob);
 
     var saved =
         org.mockito.ArgumentCaptor.forClass(
@@ -310,7 +358,7 @@ class ChatControllerTest {
         .when(mockEmitter)
         .send(any(SseEmitter.SseEventBuilder.class));
 
-    controller.streamChat("conv-123", "prompt", Persona.freeUser());
+    controller.streamChatPost("conv-123", post("prompt"), Persona.freeUser());
 
     assertUpstreamStopsWithinOneSecond(model);
   }
@@ -327,7 +375,7 @@ class ChatControllerTest {
       org.mockito.ArgumentCaptor<java.util.function.Consumer<Throwable>> consumer =
           org.mockito.ArgumentCaptor.forClass(java.util.function.Consumer.class);
 
-      controller.streamChat("conv-123", "prompt", Persona.freeUser());
+      controller.streamChatPost("conv-123", post("prompt"), Persona.freeUser());
       awaitTrue(() -> model.emitted.get() >= 2, 1000);
       assertThat(model.cancelled).as(hook + ": still running before the hook").isFalse();
 

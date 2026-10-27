@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -37,7 +38,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
@@ -95,20 +95,10 @@ public class ChatController {
 
   // ── Conversation streaming ────────────────────────────────────────────────
 
-  /** Streams chat via SSE using GET. */
-  @GetMapping(value = "/stream/{conversationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-  public SseEmitter streamChat(
-      @PathVariable String conversationId,
-      @RequestParam String prompt,
-      @AuthenticationPrincipal User user) {
-    // The conversation, never the prompt: a log keeps no data class (ADR-064).
-    logger.debug("SSE GET stream: conversation={}", conversationId);
-    claimConversation(conversationId, user);
-    return streamSse(
-        conversationId, new ChatRequest(prompt, null, null, resolveContext(user, conversationId)));
-  }
-
-  /** Streams chat via SSE using POST (supporting file reference mappings). */
+  /**
+   * Streams chat via SSE using POST. The prompt travels in the body, never in the URL: a query
+   * string reaches access logs, proxies and browser history (orazaka-conversation-service#19).
+   */
   @PostMapping(
       value = "/stream/{conversationId}",
       produces = MediaType.TEXT_EVENT_STREAM_VALUE,
@@ -188,6 +178,8 @@ public class ChatController {
     // A Swap tolerates the dispose arriving before the subscription is assigned (synchronous
     // sources emit inside subscribe()).
     Disposable.Swap upstream = Disposables.swap();
+    // One id per event ("<conversation>:<n>"): a repeated id would break Last-Event-ID resumption.
+    AtomicLong chunkIndex = new AtomicLong();
     Runnable cleanup =
         () -> {
           upstream.dispose();
@@ -203,7 +195,7 @@ public class ChatController {
 
     try {
       // ── Early-Ack: push pipeline architecture metadata before LLM inference ──
-      emitPipelineAck(emitter, conversationId, pipelineId, request.prompt());
+      emitPipelineAck(emitter, conversationId, pipelineId, request.prompt(), chunkIndex);
 
       Flux<ChatResponse> stream =
           aiClient.stream(request).timeout(Duration.ofSeconds(jobTimeoutSeconds));
@@ -217,7 +209,7 @@ public class ChatController {
                   try {
                     emitter.send(
                         SseEmitter.event()
-                            .id(conversationId)
+                            .id(conversationId + ":" + chunkIndex.getAndIncrement())
                             .name("message")
                             .data(Map.of("content", content), MediaType.APPLICATION_JSON));
                   } catch (IOException | IllegalStateException sendFailure) {
@@ -265,12 +257,16 @@ public class ChatController {
    * LLM begins generating tokens.
    */
   private void emitPipelineAck(
-      SseEmitter emitter, String conversationId, String pipelineId, String prompt) {
+      SseEmitter emitter,
+      String conversationId,
+      String pipelineId,
+      String prompt,
+      AtomicLong chunkIndex) {
     try {
       AdvancedPipelineSchema schema = pipelineExecutor.buildSchema(pipelineId, prompt);
       emitter.send(
           SseEmitter.event()
-              .id(conversationId)
+              .id(conversationId + ":" + chunkIndex.getAndIncrement())
               .name("pipeline-ack")
               .data(schema, MediaType.APPLICATION_JSON));
       logger.debug(
