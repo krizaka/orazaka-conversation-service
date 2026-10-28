@@ -10,6 +10,7 @@ import com.krizaka.orazaka.core.domain.model.job.JobInfo;
 import com.krizaka.orazaka.core.domain.model.job.JobStatus;
 import com.krizaka.orazaka.core.domain.ports.inbound.ChatSessionService;
 import com.krizaka.orazaka.core.domain.ports.inbound.JobService;
+import com.krizaka.orazaka.jobs.domain.model.PageResult;
 import com.krizaka.users.domain.exception.InvalidRequestException;
 import com.krizaka.users.domain.model.User;
 import com.krizaka.web.problem.NotFoundException;
@@ -26,9 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.TransientDataAccessResourceException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -73,8 +71,8 @@ class JobControllerTest {
   void getJobsAdmin() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "admin", "admin@test.class", true, Set.of("ROLE_ADMIN"), Map.of());
-    Page<JobInfo> expectedPage =
-        new PageImpl<>(
+    PageResult<JobInfo> expectedPage =
+        new PageResult<>(
             List.of(
                 new JobInfo(
                     "job-1",
@@ -85,23 +83,26 @@ class JobControllerTest {
                     Map.of(),
                     null,
                     Instant.now(FIXED_CLOCK),
-                    Instant.now(FIXED_CLOCK))));
-    when(jobService.getAllJobs(any(PageRequest.class))).thenReturn(expectedPage);
+                    Instant.now(FIXED_CLOCK))),
+            0,
+            10,
+            1);
+    when(jobService.getAllJobs(0, 10)).thenReturn(expectedPage);
 
-    ResponseEntity<Page<JobInfo>> response = jobController.getJobs(0, 10, user);
+    ResponseEntity<JobPage> response = jobController.getJobs(0, 10, user);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(expectedPage, response.getBody());
-    verify(jobService).getAllJobs(any(PageRequest.class));
-    verify(jobService, never()).getJobsByUserId(anyString(), any(PageRequest.class));
+    assertEquals(JobPage.of(expectedPage), response.getBody());
+    verify(jobService).getAllJobs(0, 10);
+    verify(jobService, never()).getJobsByUserId(anyString(), anyInt(), anyInt());
   }
 
   @Test
   void getJobsUser() {
     UUID userId = UUID.randomUUID();
     User user = new User(userId, "user", "user@test.class", true, Set.of("ROLE_USER"), Map.of());
-    Page<JobInfo> expectedPage =
-        new PageImpl<>(
+    PageResult<JobInfo> expectedPage =
+        new PageResult<>(
             List.of(
                 new JobInfo(
                     "job-1",
@@ -112,16 +113,19 @@ class JobControllerTest {
                     Map.of(),
                     null,
                     Instant.now(FIXED_CLOCK),
-                    Instant.now(FIXED_CLOCK))));
-    when(jobService.getJobsByUserId(eq(userId.toString()), any(PageRequest.class)))
+                    Instant.now(FIXED_CLOCK))),
+            0,
+            10,
+            1);
+    when(jobService.getJobsByUserId(eq(userId.toString()), eq(0), eq(10)))
         .thenReturn(expectedPage);
 
-    ResponseEntity<Page<JobInfo>> response = jobController.getJobs(0, 10, user);
+    ResponseEntity<JobPage> response = jobController.getJobs(0, 10, user);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(expectedPage, response.getBody());
-    verify(jobService, never()).getAllJobs(any(PageRequest.class));
-    verify(jobService).getJobsByUserId(eq(userId.toString()), any(PageRequest.class));
+    assertEquals(JobPage.of(expectedPage), response.getBody());
+    verify(jobService, never()).getAllJobs(0, 10);
+    verify(jobService).getJobsByUserId(eq(userId.toString()), eq(0), eq(10));
   }
 
   @Test
