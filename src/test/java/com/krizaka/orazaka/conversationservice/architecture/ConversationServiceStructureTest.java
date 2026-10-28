@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.conversationservice.architecture;
 
 import com.krizaka.test.architecture.ArchitectureRules;
+import com.krizaka.test.architecture.CodeRules;
 import com.krizaka.test.architecture.FrozenRules;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -61,5 +62,23 @@ class ConversationServiceStructureTest {
         ArchitectureRules.transactionalOnlyOnServicesRule(
             "..application.service..", "..application.."),
         classes);
+  }
+
+  @Test
+  @DisplayName("No mutable static state (ADR-013)")
+  void noMutableStaticFields() {
+    FrozenRules.check(CodeRules.noStaticMutableStateRule(), classes);
+  }
+
+  @Test
+  @DisplayName("[#19] No user content in the query of a GET: a prompt travels in a POST body")
+  void noContentOnGet() {
+    FrozenRules.check(CodeRules.noContentOnGetRule(), classes);
+  }
+
+  @Test
+  @DisplayName("[#10] No @Transactional method returns a stream")
+  void noTransactionalStreams() {
+    FrozenRules.check(CodeRules.noTransactionalOnStreamsRule(), classes);
   }
 }
