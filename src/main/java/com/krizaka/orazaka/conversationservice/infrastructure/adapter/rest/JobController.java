@@ -6,6 +6,7 @@ import com.krizaka.orazaka.conversationservice.application.service.JobStreamServ
 import com.krizaka.orazaka.core.domain.model.job.JobInfo;
 import com.krizaka.orazaka.core.domain.ports.inbound.ChatSessionService;
 import com.krizaka.orazaka.core.domain.ports.inbound.JobService;
+import com.krizaka.orazaka.jobs.domain.model.PageResult;
 import com.krizaka.users.domain.exception.InvalidRequestException;
 import com.krizaka.users.domain.model.User;
 import com.krizaka.web.problem.NotFoundException;
@@ -18,9 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataAccessException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -101,21 +99,20 @@ public class JobController {
    */
   /** Retrieves a paginated list of jobs for the authenticated user (or all jobs for admins). */
   @GetMapping
-  public ResponseEntity<@NotNull Page<@NotNull JobInfo>> getJobs(
+  public ResponseEntity<@NotNull JobPage> getJobs(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @AuthenticationPrincipal User user) {
     logger.debug("Fetching paginated jobs for user: {}, page: {}, size: {}", user.id(), page, size);
 
-    PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-    Page<@NotNull JobInfo> jobs;
+    PageResult<JobInfo> jobs;
     if (user.authorities().contains("ROLE_ADMIN")) {
       logger.debug("Principal is ADMIN. Bypassing user filter to query all platform jobs.");
-      jobs = jobService.getAllJobs(pageable);
+      jobs = jobService.getAllJobs(page, size);
     } else {
-      jobs = jobService.getJobsByUserId(user.id().toString(), pageable);
+      jobs = jobService.getJobsByUserId(user.id().toString(), page, size);
     }
-    return ResponseEntity.ok(jobs);
+    return ResponseEntity.ok(JobPage.of(jobs));
   }
 
   /** Fetches the single, atomic state of a specific job. */
