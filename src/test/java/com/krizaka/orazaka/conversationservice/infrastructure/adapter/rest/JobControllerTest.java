@@ -117,8 +117,7 @@ class JobControllerTest {
             0,
             10,
             1);
-    when(jobService.getJobsByUserId(eq(userId.toString()), eq(0), eq(10)))
-        .thenReturn(expectedPage);
+    when(jobService.getJobsByUserId(eq(userId.toString()), eq(0), eq(10))).thenReturn(expectedPage);
 
     ResponseEntity<JobPage> response = jobController.getJobs(0, 10, user);
 
