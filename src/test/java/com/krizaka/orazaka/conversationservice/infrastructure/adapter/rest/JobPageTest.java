@@ -2,7 +2,6 @@ package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.krizaka.orazaka.core.domain.model.job.JobInfo;
 import com.krizaka.orazaka.jobs.domain.model.PageResult;
 import java.util.List;
 import org.junit.jupiter.api.Test;
