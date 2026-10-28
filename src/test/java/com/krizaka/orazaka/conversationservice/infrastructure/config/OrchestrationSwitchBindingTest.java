@@ -19,7 +19,8 @@ import org.junit.jupiter.api.Test;
 class OrchestrationSwitchBindingTest {
 
   private static CoreProperties bound(Map<String, Object> overrides) {
-    return new CoreInfrastructureAutoConfiguration().coreProperties(ApplicationYaml.ofThisService(overrides));
+    return new CoreInfrastructureAutoConfiguration()
+        .coreProperties(ApplicationYaml.ofThisService(overrides));
   }
 
   @Test
