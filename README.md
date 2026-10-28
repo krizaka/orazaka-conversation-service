@@ -32,6 +32,7 @@ part of the [Orazaka platform](https://github.com/krizaka/orazaka) by [Krizaka](
 The interactive ingress (port `8080`, behind the edge): `/api/v1/chat` (SSE streaming),
 `/api/v1/intent`, `/api/v1/models`, `/api/v1/pipeline`, `/api/v1/mcp`, `/api/v1/checks` (court records and credit for products, orazaka-ai-engine#105), `/api/v1/jobs`,
 `/api/v1/features`, `/api/v1/media`, `/api/v1/assets`, `/api/v1/status`.
+Service-only: `POST /internal/v1/agent-turns` (one model turn of a client-run agent for the Studio service, ADR-093 §4: the actor is named in the body, hydrated and refused when unknown or disabled, the engine returns the tool calls instead of running them).
 It translates transport into an `Intention` and enforces security — **no business logic**.
 Owns `infra/initdb/20-conversation.sql`.
 
