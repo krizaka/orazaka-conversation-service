@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.krizaka.orazaka.conversationservice.application.service.AgentTurnService;
 import com.krizaka.orazaka.conversationservice.application.service.ContextService;
 import com.krizaka.orazaka.core.domain.model.chat.AgentTurnRequest;
 import com.krizaka.orazaka.core.domain.model.chat.AgentTurnResult;
@@ -58,7 +59,8 @@ class AgentTurnsControllerTest {
     users = mock(UserDirectoryClient.class);
     mvc =
         MockMvcBuilders.standaloneSetup(
-                new AgentTurnsController(turns, new ContextService(users), users))
+                new AgentTurnsController(
+                    new AgentTurnService(turns, new ContextService(users), users)))
             .build();
   }
 
