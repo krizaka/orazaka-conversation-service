@@ -12,7 +12,7 @@ class JobPageTest {
 
   @Test
   void theWirePageSpellsOutItsTotalPages() {
-    JobPage page = JobPage.of(new PageResult<JobInfo>(List.of(), 2, 10, 21));
+    JobPage page = JobPage.of(new PageResult<>(List.of(), 2, 10, 21));
 
     assertThat(page.number()).isEqualTo(2);
     assertThat(page.size()).isEqualTo(10);
