@@ -17,20 +17,22 @@ class JdbcOperatorAuditStore implements OperatorAuditStore {
   @Override
   public void append(Line line) {
     jdbc.update(
-        "INSERT INTO operator_audit (actor_id, actor_label, action, target_id, request_id, outcome)"
-            + " VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO operator_audit (actor_id, actor_label, action, target_id, request_id, outcome,"
+            + " duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
         line.actorId(),
         line.actorLabel(),
         line.action(),
         line.targetId(),
         line.requestId(),
-        line.outcome());
+        line.outcome(),
+        line.durationMs());
   }
 
   @Override
   public List<Stored> recent(int limit) {
     return jdbc.query(
-        "SELECT id, at, actor_label, action, target_id, request_id, outcome FROM operator_audit"
+        "SELECT id, at, actor_label, action, target_id, request_id, outcome,"
+            + " duration_ms FROM operator_audit"
             + " ORDER BY at DESC, id DESC LIMIT ?",
         (rs, i) ->
             new Stored(
@@ -40,7 +42,8 @@ class JdbcOperatorAuditStore implements OperatorAuditStore {
                 rs.getString("action"),
                 rs.getString("target_id"),
                 rs.getString("request_id"),
-                rs.getString("outcome")),
+                rs.getString("outcome"),
+                (Long) rs.getObject("duration_ms")),
         limit);
   }
 }
