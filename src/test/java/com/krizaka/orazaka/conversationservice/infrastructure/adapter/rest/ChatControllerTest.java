@@ -412,4 +412,38 @@ class ChatControllerTest {
         new com.krizaka.orazaka.core.domain.event.PipelineStageEvent("conv-123", "x"));
     verify(second).send(any(SseEmitter.SseEventBuilder.class));
   }
+
+  @Test
+  void aServerToolRunIsRelayedToTheLiveStreamAsAToolCallEventWithoutItsArguments()
+      throws Exception {
+    ChatStreamRegistry registry = new ChatStreamRegistry();
+    SseEmitter emitter = mock(SseEmitter.class);
+    registry.register("conv-123", emitter);
+
+    registry.onToolExecuted(
+        new com.krizaka.orazaka.core.domain.event.ToolExecutedEvent(
+            "conv-123", "lookup_lease", "call-1"));
+
+    org.mockito.ArgumentCaptor<SseEmitter.SseEventBuilder> sent =
+        org.mockito.ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+    verify(emitter).send(sent.capture());
+    String wire =
+        sent.getValue().build().stream()
+            .map(part -> String.valueOf(part.getData()))
+            .collect(java.util.stream.Collectors.joining());
+    assertThat(wire).contains("event:tool-call").contains("lookup_lease").contains("call-1");
+  }
+
+  @Test
+  void aToolRunOfAnotherConversationDoesNotReachTheStream() throws Exception {
+    ChatStreamRegistry registry = new ChatStreamRegistry();
+    SseEmitter emitter = mock(SseEmitter.class);
+    registry.register("conv-123", emitter);
+
+    registry.onToolExecuted(
+        new com.krizaka.orazaka.core.domain.event.ToolExecutedEvent(
+            "conv-other", "lookup_lease", null));
+
+    verifyNoInteractions(emitter);
+  }
 }
