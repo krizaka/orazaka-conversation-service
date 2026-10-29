@@ -420,7 +420,7 @@ class VoiceTurnServiceTest {
         .thenReturn(
             new EntitlementSnapshot(
                 ACTOR.toString(),
-                "yororis",
+                "private",
                 Map.of("capability.chat", "true"),
                 500L,
                 Instant.now().plusSeconds(60)));

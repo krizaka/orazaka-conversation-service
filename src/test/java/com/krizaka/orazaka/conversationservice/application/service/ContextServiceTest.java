@@ -141,7 +141,7 @@ class ContextServiceTest {
 
   @Test
   void resolve_planWithRetentionNone_declaresTheNoStorageMode() {
-    Context ctx = resolveUnder(plan("yororis", Map.of("retention.none", "true")));
+    Context ctx = resolveUnder(plan("private", Map.of("retention.none", "true")));
 
     assertTrue(ctx.retentionNone());
     assertEquals("none", ctx.preferences().get(Context.RETENTION_KEY));
