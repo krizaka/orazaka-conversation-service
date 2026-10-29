@@ -117,7 +117,8 @@ CREATE TABLE IF NOT EXISTS operator_audit (
     action VARCHAR(160) NOT NULL,
     target_id VARCHAR(255),
     request_id VARCHAR(64),
-    outcome VARCHAR(12) NOT NULL DEFAULT 'ok'
+    outcome VARCHAR(12) NOT NULL DEFAULT 'ok',
+    duration_ms BIGINT
 );
 CREATE INDEX IF NOT EXISTS idx_operator_audit_at ON operator_audit(at DESC);
 
