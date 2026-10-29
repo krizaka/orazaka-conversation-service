@@ -26,7 +26,7 @@ COPY orazaka-end2end orazaka-end2end
 RUN mvn clean package -pl orazaka-apps/services/orazaka-conversation-service -am -DskipTests
 
 # ── Runtime Stage ────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine@sha256:51ab5e3302e7141ce665ca3ea85e8b5cd648eafbc3c0c90dd79d6537684e4555
+FROM eclipse-temurin:21-jre-alpine@sha256:b48e02e0ea88d7bfb305335df94923bdef394905f4147dccd52e873cf17b1088
 WORKDIR /app
 
 # Create a non-privileged system group and user
