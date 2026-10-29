@@ -1,7 +1,9 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.support;
 
 import com.krizaka.orazaka.core.domain.event.PipelineStageEvent;
+import com.krizaka.orazaka.core.domain.event.ToolExecutedEvent;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -67,6 +69,34 @@ public class ChatStreamRegistry {
     } catch (IOException | IllegalStateException e) {
       logger.debug(
           "Chat SSE [{}] closed before pipeline-step could be sent.", event.conversationId());
+      emitters.remove(event.conversationId());
+    }
+  }
+
+  /**
+   * Relays a tool the engine ran during the turn to the conversation's live SSE stream as a {@code
+   * tool-call} event: the tool's name and call id only, never its arguments or result (ADR-064).
+   * No-op if no stream is registered.
+   *
+   * @param event The tool-run event published by the engine.
+   */
+  @EventListener
+  public void onToolExecuted(ToolExecutedEvent event) {
+    SseEmitter emitter = emitters.get(event.conversationId());
+    if (emitter == null) {
+      return;
+    }
+    Map<String, Object> data = new HashMap<>();
+    data.put("tool", event.toolName());
+    data.put("callId", event.callId());
+    try {
+      emitter.send(
+          SseEmitter.event()
+              .id(event.conversationId())
+              .name("tool-call")
+              .data(data, MediaType.APPLICATION_JSON));
+    } catch (IOException | IllegalStateException e) {
+      logger.debug("Chat SSE [{}] closed before tool-call could be sent.", event.conversationId());
       emitters.remove(event.conversationId());
     }
   }
