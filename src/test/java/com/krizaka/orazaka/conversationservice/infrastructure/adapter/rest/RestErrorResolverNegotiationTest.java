@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  * refusal raised before the stream opens (451 consent, 402 credits, 503 engine off) is a JSON body:
  * with no content type of its own, Spring found nothing producible for that {@code Accept} and the
  * refusal itself failed — a 500, and the caller read « unavailable » where the answer was « agree
- * to version 2.1 » (krizaka/yororis#99, found live on dev).
+ * to version 2.1 » (found live on dev).
  */
 class RestErrorResolverNegotiationTest {
 
