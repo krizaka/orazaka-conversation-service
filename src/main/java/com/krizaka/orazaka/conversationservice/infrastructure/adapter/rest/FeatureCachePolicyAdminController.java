@@ -1,17 +1,12 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
+import static java.util.Objects.requireNonNull;
+
 import com.krizaka.orazaka.persistence.domain.ports.inbound.FeatureCachePolicyManager;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * The administrator's side of the prompt-cache policy (ADR-094 §4.5, orazaka-ai-engine#173): what
@@ -30,7 +25,7 @@ public class FeatureCachePolicyAdminController {
   private final FeatureCachePolicyManager policies;
 
   public FeatureCachePolicyAdminController(FeatureCachePolicyManager policies) {
-    this.policies = Objects.requireNonNull(policies, "FeatureCachePolicyManager must not be null");
+    this.policies = requireNonNull(policies, "FeatureCachePolicyManager must not be null");
   }
 
   /** The body of a policy update. */
