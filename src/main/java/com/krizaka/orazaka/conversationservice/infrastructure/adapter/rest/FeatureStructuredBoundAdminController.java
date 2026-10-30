@@ -61,11 +61,12 @@ public class FeatureStructuredBoundAdminController {
    */
   @PutMapping("/{featureKey}")
   public Bound put(@PathVariable String featureKey, @RequestBody Request request) {
-    BoundEdits.write(
-        request == null ? null : request.maxAttempts(),
-        "maxAttempts",
-        v -> bounds.upsert(featureKey, v));
-    return new Bound(featureKey, request.maxAttempts(), DEFAULT.equals(featureKey));
+    int stored =
+        BoundEdits.write(
+            request == null ? null : request.maxAttempts(),
+            "maxAttempts",
+            v -> bounds.upsert(featureKey, v));
+    return new Bound(featureKey, stored, DEFAULT.equals(featureKey));
   }
 
   /**

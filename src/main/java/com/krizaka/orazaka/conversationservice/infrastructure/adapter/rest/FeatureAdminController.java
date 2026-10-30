@@ -70,14 +70,13 @@ public class FeatureAdminController {
   @PutMapping("/feature-tool-bounds/{featureKey}")
   public ToolBound putToolBound(
       @PathVariable String featureKey, @RequestBody ToolBoundRequest request) {
-    BoundEdits.write(
-        request == null ? null : request.maxToolRounds(),
-        "maxToolRounds",
-        v -> bounds.upsert(featureKey, v));
+    int stored =
+        BoundEdits.write(
+            request == null ? null : request.maxToolRounds(),
+            "maxToolRounds",
+            v -> bounds.upsert(featureKey, v));
     return new ToolBound(
-        featureKey,
-        request.maxToolRounds(),
-        FeatureToolBoundManager.DEFAULT_FEATURE_KEY.equals(featureKey));
+        featureKey, stored, FeatureToolBoundManager.DEFAULT_FEATURE_KEY.equals(featureKey));
   }
 
   /**

@@ -37,14 +37,16 @@ final class BoundEdits {
    * @param field the body's field name, for the message
    * @param write stores the bound; throws {@link IllegalArgumentException} for a refused key or
    *     range
+   * @return the stored value
    * @throws InvalidRequestProblem when the value is missing or refused (400)
    */
-  static void write(Integer value, String field, IntConsumer write) {
+  static int write(Integer value, String field, IntConsumer write) {
     if (value == null) {
       throw new InvalidRequestProblem(field + " is required");
     }
     try {
       write.accept(value);
+      return value;
     } catch (IllegalArgumentException e) {
       throw new InvalidRequestProblem(e.getMessage());
     }
