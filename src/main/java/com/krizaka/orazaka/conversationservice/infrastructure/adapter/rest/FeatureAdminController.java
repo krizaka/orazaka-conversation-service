@@ -70,14 +70,10 @@ public class FeatureAdminController {
   @PutMapping("/feature-tool-bounds/{featureKey}")
   public ToolBound putToolBound(
       @PathVariable String featureKey, @RequestBody ToolBoundRequest request) {
-    if (request == null || request.maxToolRounds() == null) {
-      throw new InvalidRequestProblem("maxToolRounds is required");
-    }
-    try {
-      bounds.upsert(featureKey, request.maxToolRounds());
-    } catch (IllegalArgumentException e) {
-      throw new InvalidRequestProblem(e.getMessage());
-    }
+    BoundEdits.write(
+        request == null ? null : request.maxToolRounds(),
+        "maxToolRounds",
+        v -> bounds.upsert(featureKey, v));
     return new ToolBound(
         featureKey,
         request.maxToolRounds(),
@@ -92,13 +88,7 @@ public class FeatureAdminController {
    */
   @DeleteMapping("/feature-tool-bounds/{featureKey}")
   public ResponseEntity<Void> deleteToolBound(@PathVariable String featureKey) {
-    try {
-      return bounds.delete(featureKey)
-          ? ResponseEntity.noContent().build()
-          : ResponseEntity.notFound().build();
-    } catch (IllegalArgumentException e) {
-      throw new InvalidRequestProblem(e.getMessage());
-    }
+    return BoundEdits.respond(() -> bounds.delete(featureKey));
   }
 
   /**

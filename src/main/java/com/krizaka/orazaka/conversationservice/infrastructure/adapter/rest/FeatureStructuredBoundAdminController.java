@@ -61,31 +61,21 @@ public class FeatureStructuredBoundAdminController {
    */
   @PutMapping("/{featureKey}")
   public Bound put(@PathVariable String featureKey, @RequestBody Request request) {
-    if (request == null || request.maxAttempts() == null) {
-      throw new InvalidRequestProblem("maxAttempts is required");
-    }
-    try {
-      bounds.upsert(featureKey, request.maxAttempts());
-    } catch (IllegalArgumentException e) {
-      throw new InvalidRequestProblem(e.getMessage());
-    }
+    BoundEdits.write(
+        request == null ? null : request.maxAttempts(),
+        "maxAttempts",
+        v -> bounds.upsert(featureKey, v));
     return new Bound(featureKey, request.maxAttempts(), DEFAULT.equals(featureKey));
   }
 
   /**
-   * Removes a feature's own bound so it falls back to the default row.
+   * Removes the structured-output bound a feature set for itself; the default row then applies.
    *
-   * @param featureKey the feature key, never {@code *}
-   * @return 204, or 404 when the feature had no row of its own
+   * @param featureKey the feature key ({@code *} is refused)
+   * @return 204 when removed, 404 when the feature had no bound of its own
    */
   @DeleteMapping("/{featureKey}")
   public ResponseEntity<Void> remove(@PathVariable String featureKey) {
-    try {
-      return bounds.delete(featureKey)
-          ? ResponseEntity.noContent().build()
-          : ResponseEntity.notFound().build();
-    } catch (IllegalArgumentException e) {
-      throw new InvalidRequestProblem(e.getMessage());
-    }
+    return BoundEdits.respond(() -> bounds.delete(featureKey));
   }
 }
