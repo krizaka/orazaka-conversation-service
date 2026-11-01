@@ -64,4 +64,15 @@ class VoiceTurnTest {
     assertThat(turn.hashCode())
         .isEqualTo(new VoiceTurn("c", "fr", null, "je veux en finir", null, null, null).hashCode());
   }
+
+  @Test
+  @DisplayName("Malformed locale subtags are refused, well-formed ones kept")
+  void localeSubtags() {
+    for (String bad : new String[] {"en-", "en--CA", "en-C", "e", "-en", "fr-CA_x"}) {
+      assertThatThrownBy(() -> new VoiceTurn("c", bad, null, "x", null, null, null))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+    assertThat(new VoiceTurn("c", "zh-Hant-TW", null, "x", null, null, null).locale())
+        .isEqualTo("zh-Hant-TW");
+  }
 }

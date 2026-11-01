@@ -110,9 +110,11 @@ public class VoiceClipStore {
     }
   }
 
+  private static final SecureRandom RANDOM = new SecureRandom();
+
   private static byte[] randomKey() {
     byte[] drawn = new byte[32];
-    new SecureRandom().nextBytes(drawn);
+    RANDOM.nextBytes(drawn);
     return drawn;
   }
 
