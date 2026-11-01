@@ -1,0 +1,13 @@
+{
+  "project": "krizaka_orazaka-conversation-service",
+  "counts": {
+    "bugs": 0,
+    "vulnerabilities": 0,
+    "hotspots": 0,
+    "smells_blocker": 0,
+    "smells_critical": 9,
+    "smells_major": 7,
+    "smells_minor": 1,
+    "smells_info": 0
+  }
+}
