@@ -38,12 +38,26 @@ public record VoiceTurn(
    */
   public static final int MAX_CONTEXT_CHARACTERS = 8_000;
 
+  /** A BCP 47 tag: a 2-3 letter language, then subtags of 2-8 letters or digits. */
+  private static boolean isBcp47(String tag) {
+    String[] parts = tag.split("-", -1);
+    if (!parts[0].matches("[a-zA-Z]{2,3}")) {
+      return false;
+    }
+    for (int i = 1; i < parts.length; i++) {
+      if (!parts[i].matches("[a-zA-Z0-9]{2,8}")) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /** Compact canonical constructor enforcing the turn's invariants (ERR-106). */
   public VoiceTurn {
     if (conversationId == null || conversationId.isBlank()) {
       throw new IllegalArgumentException("a voice turn belongs to a conversation");
     }
-    if (locale == null || !locale.matches("^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$")) {
+    if (locale == null || !isBcp47(locale)) {
       throw new IllegalArgumentException("locale must be a BCP 47 tag such as fr-CA");
     }
     boolean hasAudio = audio != null && audio.length > 0;

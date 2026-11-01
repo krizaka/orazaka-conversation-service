@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest.dto;
 
 import com.krizaka.orazaka.core.domain.model.embedding.EmbeddingResult;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -12,7 +13,25 @@ public record EmbeddingResponse(
     String runId, String model, int dimensions, List<Item> data, Usage usage) {
 
   /** One vector, at the index of its input. */
-  public record Item(int index, float[] embedding) {}
+  public record Item(int index, float[] embedding) {
+
+    @Override
+    public boolean equals(Object other) {
+      return other instanceof Item item
+          && index == item.index
+          && Arrays.equals(embedding, item.embedding);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Integer.hashCode(index) + Arrays.hashCode(embedding);
+    }
+
+    @Override
+    public String toString() {
+      return "Item[index=" + index + ", embedding=" + Arrays.toString(embedding) + "]";
+    }
+  }
 
   /** Tokens the provider billed for the batch. */
   public record Usage(int promptTokens) {}
