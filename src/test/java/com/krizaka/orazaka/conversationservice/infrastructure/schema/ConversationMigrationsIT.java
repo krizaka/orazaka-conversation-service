@@ -138,7 +138,9 @@ class ConversationMigrationsIT extends AbstractContainerIntegrationTest {
   void theServiceConfigurationBaselinesAtZeroAndKeepsItsOwnHistoryTable() throws Exception {
     String yml =
         Files.readString(
-            Path.of(System.getProperty("user.dir"), "src/main/resources/application.yml"));
+            Path.of(
+                System.getProperty("user.dir"),
+                "src/main/resources/META-INF/orazaka/conversation-service-defaults.yml"));
     assertThat(yml)
         .contains("table: flyway_history_conversation")
         .contains("baseline-version: \"0\"")
