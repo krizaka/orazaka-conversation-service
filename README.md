@@ -34,7 +34,7 @@ The interactive ingress (port `8080`, behind the edge): `/api/v1/chat` (SSE stre
 `/api/v1/features`, `/api/v1/media`, `/api/v1/assets`, `/api/v1/status`.
 Service-only: `POST /internal/v1/agent-turns` (one model turn of a client-run agent for the Studio service, ADR-093 §4: the actor is named in the body, hydrated and refused when unknown or disabled, the engine returns the tool calls instead of running them).
 It translates transport into an `Intention` and enforces security — **no business logic**.
-Owns `infra/initdb/20-conversation.sql`.
+Owns its schema: `src/main/resources/db/migration/V1__conversation_baseline.sql`, applied by Flyway at startup (history table `flyway_history_conversation`; `infra/initdb/20-conversation.sql` is a comment).
 
 ### The law review queue (ADR-089 §8): `/api/v1/admin/law/**`
 

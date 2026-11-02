@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.krizaka.orazaka.conversationservice.domain.port.ProtectedConversationStore;
 import com.krizaka.orazaka.conversationservice.domain.port.ProtectedConversationStore.Erased;
 import com.krizaka.orazaka.test.AbstractContainerIntegrationTest;
-import com.krizaka.orazaka.test.architecture.SqlBoundaryRules;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,7 +25,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * The memory of a regulated pack's voice and listening turns is erased on request and ages out
- * (orazaka#301), against the <b>real</b> DDL of {@code 20-conversation.sql}.
+ * (orazaka#301), against the <b>real</b> DDL of {@code V1__conversation_baseline.sql}.
  *
  * <p>The proof is not a list of tables that happen to be checked: the person's words are searched
  * for in <b>every table of the schema</b>.
@@ -46,7 +45,7 @@ class ProtectedConversationIT extends AbstractContainerIntegrationTest {
   private static final String OTHER_WORDS = "des mots qui ne sont pas a eric";
   private static final String CHAT_WORDS = "une question ordinaire sur la meteo";
 
-  /** The chat tables and the protected index, out of the real initdb file (not the whole file). */
+  /** The chat tables and the protected index, out of the real V1 baseline (not the whole file). */
   private static final Pattern DDL =
       Pattern.compile(
           "(?s)CREATE TABLE orazaka_chat_sessions \\(.*?\\n\\);"
@@ -70,22 +69,22 @@ class ProtectedConversationIT extends AbstractContainerIntegrationTest {
     jdbc.execute(
         "DROP TABLE IF EXISTS orazaka_chat_messages, orazaka_chat_sessions,"
             + " orazaka_protected_conversation CASCADE");
-    Path initDb = conversationInitDb();
-    Matcher statement = DDL.matcher(Files.readString(initDb));
+    Matcher statement = DDL.matcher(Files.readString(baseline()));
     int executed = 0;
     while (statement.find()) {
       jdbc.execute(statement.group());
       executed++;
     }
-    assertThat(executed).as("the three tables read from the initdb file").isEqualTo(3);
+    assertThat(executed).as("the three tables read from the V1 baseline").isEqualTo(3);
     service =
         new JdbcProtectedConversationStoreAdapter(
             jdbc, new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
   }
 
-  private static Path conversationInitDb() {
-    Path dir = Path.of(System.getProperty("user.dir"));
-    return SqlBoundaryRules.locateInitDb(dir).resolve("20-conversation.sql");
+  private static Path baseline() {
+    return Path.of(
+        System.getProperty("user.dir"),
+        "src/main/resources/db/migration/V1__conversation_baseline.sql");
   }
 
   @BeforeEach
