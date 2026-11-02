@@ -96,9 +96,16 @@ class OperatorAuditFilter extends OncePerRequestFilter {
   /** A request's mapping: the template, every variable written {@code {id}}, and its target. */
   private record Mapped(String pattern, String target) {}
 
+  private static String outcomeOf(int status) {
+    if (status < 400) {
+      return "ok";
+    }
+    return REFUSALS.contains(status) ? "refused" : "failed";
+  }
+
   private static OperatorAuditStore.Line line(
       String method, String path, Mapped mapped, Authentication auth, int status) {
-    String outcome = status < 400 ? "ok" : REFUSALS.contains(status) ? "refused" : "failed";
+    String outcome = outcomeOf(status);
     if (mapped != null) {
       return actor(auth, method + " " + mapped.pattern(), mapped.target(), outcome);
     }
