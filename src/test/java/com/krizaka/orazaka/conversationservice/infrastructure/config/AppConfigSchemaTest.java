@@ -10,9 +10,9 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 /**
- * The context's bootstrap SQL carries the app-version tables exactly as the kit ships them (the
- * incremental script for an existing database, in the workspace's {@code infra/migrations}, is the
- * same text): a drift would give the service a table its store cannot read.
+ * The context's V1 baseline (Flyway) carries the app-version tables exactly as the kit ships them
+ * (the incremental script for an existing database, in the workspace's {@code infra/migrations}, is
+ * the same text): a drift would give the service a table its store cannot read.
  */
 class AppConfigSchemaTest {
 
@@ -28,9 +28,10 @@ class AppConfigSchemaTest {
 
   @Test
   void theBootstrapContainsTheKitSchemaVerbatim() throws IOException {
-    String initdb = Files.readString(Path.of("infra/initdb/20-conversation.sql"));
+    String initdb =
+        Files.readString(Path.of("src/main/resources/db/migration/V1__conversation_baseline.sql"));
     assertTrue(
         initdb.contains(kitSchema()),
-        "20-conversation.sql must carry krizaka-app-config-schema.sql verbatim");
+        "V1__conversation_baseline.sql must carry krizaka-app-config-schema.sql verbatim");
   }
 }
