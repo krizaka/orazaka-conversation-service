@@ -1,6 +1,7 @@
 package com.krizaka.orazaka.conversationservice.infrastructure.adapter.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -61,6 +62,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -380,8 +382,7 @@ class ToolCallStreamPathTest {
 
   /** One streamed turn through the real controller; returns what the client received. */
   private static String streamOneTurn(
-      org.springframework.boot.test.context.assertj.AssertableApplicationContext context)
-      throws InterruptedException {
+      org.springframework.boot.test.context.assertj.AssertableApplicationContext context) {
     var contextService = mock(ContextService.class);
     when(contextService.resolve(any(), any()))
         .thenReturn(
@@ -411,11 +412,10 @@ class ToolCallStreamPathTest {
             "What does my lease say about the rent?", List.of(), null, null, null, null, "default"),
         Persona.freeUser());
 
-    long deadline = System.nanoTime() + 10_000_000_000L;
-    while (emitter.events.stream().noneMatch(e -> e.contains(KNOWLEDGE_HIT))
-        && System.nanoTime() < deadline) {
-      Thread.sleep(25);
-    }
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .pollInterval(Duration.ofMillis(25))
+        .until(() -> emitter.events.stream().anyMatch(e -> e.contains(KNOWLEDGE_HIT)));
     return String.join("\n", emitter.events);
   }
 }
