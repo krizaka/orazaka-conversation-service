@@ -23,7 +23,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
-import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -119,9 +118,6 @@ public class SecurityConfig {
   @SuppressWarnings("java:S4502") // Justified: CSRF disabled for stateless API.
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
-    var resolver = new DefaultBearerTokenResolver();
-    resolver.setAllowUriQueryParameter(true);
-
     // Justified: Stateless OAuth2 Resource Server — no cookies, no session state.
     // CSRF protection is not applicable for token-based (Bearer) authentication.
     // See AGENTS.md §7.1: "CSRF disabled for stateless API."
@@ -185,9 +181,9 @@ public class SecurityConfig {
         .cors(Customizer.withDefaults())
         .oauth2ResourceServer(
             oauth2 ->
-                oauth2
-                    .bearerTokenResolver(resolver)
-                    .opaqueToken(opaque -> opaque.authenticationManager(authenticationManager)));
+                // The default resolver: the token is read from the Authorization header only, never
+                // from the query string (BearerTokenLocationTest).
+                oauth2.opaqueToken(opaque -> opaque.authenticationManager(authenticationManager)));
 
     http.addFilterAfter(operationGraphFilter, BearerTokenAuthenticationFilter.class);
     rateLimitFilter.ifPresent(
