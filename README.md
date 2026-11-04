@@ -80,7 +80,7 @@ mapped write by its template (`POST /api/v1/admin/law/kinds/{id}/promote`), and 
 
 | | |
 |:---|:---|
-| Depends on | [`orazaka-build`](https://github.com/krizaka/orazaka-build) · [`orazaka-contracts`](https://github.com/krizaka/orazaka-contracts) · [`krizaka-users`](https://github.com/krizaka/krizaka-users) · [`krizaka-billing`](https://github.com/krizaka/krizaka-billing) · [`orazaka-ai-engine`](https://github.com/krizaka/orazaka-ai-engine) |
+| Depends on | [`orazaka-build`](https://github.com/krizaka/orazaka-build) · [`orazaka-contracts`](https://github.com/krizaka/orazaka-contracts) · [`krizaka-users`](https://github.com/krizaka/krizaka-build/tree/main/krizaka-users) · [`krizaka-billing`](https://github.com/krizaka/krizaka-billing) · [`orazaka-ai-engine`](https://github.com/krizaka/orazaka-ai-engine) |
 | Used by | _no other Orazaka repository._ |
 | Workspace path | `orazaka-apps/services/orazaka-conversation-service` |
 
