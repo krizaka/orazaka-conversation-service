@@ -24,7 +24,8 @@ import org.springframework.stereotype.Service;
 @Service
 class UserCredentialsProviderAdapter implements UserCredentialsProvider {
 
-  private static final Logger logger = LoggerFactory.getLogger(UserCredentialsProviderAdapter.class);
+  private static final Logger logger =
+      LoggerFactory.getLogger(UserCredentialsProviderAdapter.class);
 
   private final UserDirectoryClient userDirectoryService;
 
@@ -40,7 +41,8 @@ class UserCredentialsProviderAdapter implements UserCredentialsProvider {
     }
     Optional<String> session = sessionOf(userId);
     if (session.isEmpty()) {
-      logger.warn("No session of user {} on this thread, the provider key is not released.", userId);
+      logger.warn(
+          "No session of user {} on this thread, the provider key is not released.", userId);
       return Optional.empty();
     }
     String turnId = "turn-" + UUID.randomUUID();

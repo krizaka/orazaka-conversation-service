@@ -44,8 +44,7 @@ class UserCredentialsProviderAdapterTest {
 
   private static void signIn(UUID id, String token) {
     var user =
-        new User(
-            id, "eric", "eric@example.test", true, Set.of("USER"), Map.of(), List.of(), null);
+        new User(id, "eric", "eric@example.test", true, Set.of("USER"), Map.of(), List.of(), null);
     SecurityContextHolder.getContext()
         .setAuthentication(new UsernamePasswordAuthenticationToken(user, token, List.of()));
   }
