@@ -1,0 +1,168 @@
+package com.krizaka.sovkora.conversationservice.application.service;
+
+import static org.mockito.Mockito.*;
+
+import com.krizaka.sovkora.conversationservice.infrastructure.config.RouterProperties;
+import com.krizaka.sovkora.persistence.domain.model.JobDto;
+import com.krizaka.sovkora.persistence.domain.ports.inbound.JobPersistenceProvider;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
+
+@ExtendWith(MockitoExtension.class)
+class JobReconciliationServiceTest {
+
+  private static final Set<String> ACTIVE = Set.of("PENDING", "PROCESSING");
+  private static final String USER_ID = "user-1";
+
+  @TempDir Path tempDir;
+
+  @Mock private JobPersistenceProvider jobPersistenceProvider;
+
+  private final com.krizaka.sovkora.assets.application.service.EncryptedAssetService assets =
+      testAssets();
+
+  private static final com.krizaka.sovkora.assets.infrastructure.config.MediaStorageProperties
+      LOCAL =
+          new com.krizaka.sovkora.assets.infrastructure.config.MediaStorageProperties(
+              "local", null, null, "storage.bunnycdn.com", null, "acme");
+
+  private JobReconciliationService service;
+
+  @BeforeEach
+  void setUp() {
+    RouterProperties props =
+        new RouterProperties(
+            new RouterProperties.UploadsConfig(tempDir.toString(), "/uploads/**", 0));
+    service =
+        new JobReconciliationService(
+            jobPersistenceProvider,
+            new ObjectMapper(),
+            props,
+            assets,
+            testEncryption(),
+            new com.krizaka.sovkora.assets.infrastructure.storage.NoDurableAssetStore(),
+            LOCAL);
+  }
+
+  private void writeResult(String jobId, String json) throws Exception {
+    Path outputDir = tempDir.resolve(Path.of(USER_ID, jobId, "output"));
+    Files.createDirectories(outputDir);
+    // Through the store, like the executor that writes it: the reconciler reads an encrypted
+    // result, and a fixture writing plaintext would test a path production no longer has.
+    assets.write(
+        outputDir.resolve("result.json"), json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  }
+
+  private JobDto pendingJob(String jobId) {
+    return new JobDto(
+        jobId,
+        USER_ID,
+        "orazaka.core.media.image",
+        "PENDING",
+        Map.of(),
+        Map.of(),
+        null,
+        Instant.now(),
+        Instant.now());
+  }
+
+  @Test
+  void reconcile_completedResultOnDisk_marksCompleted() throws Exception {
+    String jobId = "job-ok";
+    writeResult(jobId, "{\"url\":\"/uploads/u/j/output/image.png\",\"format\":\"png\"}");
+    when(jobPersistenceProvider.findJobsByStatuses(ACTIVE)).thenReturn(List.of(pendingJob(jobId)));
+
+    service.reconcileScheduled();
+
+    verify(jobPersistenceProvider)
+        .updateJobStatus(
+            jobId,
+            "COMPLETED",
+            Map.of("url", "/uploads/u/j/output/image.png", "format", "png"),
+            null);
+  }
+
+  @Test
+  void reconcile_errorResultOnDisk_marksFailed() throws Exception {
+    String jobId = "job-err";
+    writeResult(jobId, "{\"error\":\"boom\"}");
+    when(jobPersistenceProvider.findJobsByStatuses(ACTIVE)).thenReturn(List.of(pendingJob(jobId)));
+
+    service.reconcileScheduled();
+
+    verify(jobPersistenceProvider).updateJobStatus(jobId, "FAILED", null, "boom");
+  }
+
+  @Test
+  void reconcile_noResultFileOnDisk_leavesJobUntouched() {
+    when(jobPersistenceProvider.findJobsByStatuses(ACTIVE))
+        .thenReturn(List.of(pendingJob("job-pending")));
+
+    service.reconcileScheduled();
+
+    verify(jobPersistenceProvider, never()).updateJobStatus(anyString(), anyString(), any(), any());
+  }
+
+  /** A real store over a throwaway keyring: tests exercise the format, never a stub of it. */
+  static com.krizaka.sovkora.assets.application.service.EncryptedAssetService testAssets() {
+    try {
+      java.nio.file.Path keyFile =
+          java.nio.file.Files.createTempDirectory("orz-keys").resolve("master.key");
+      com.krizaka.sovkora.assets.infrastructure.adapter.FileMasterKeyProvider.addKey(
+          keyFile, "test");
+      return new com.krizaka.sovkora.assets.application.service.EncryptedAssetService(
+          new com.krizaka.sovkora.assets.infrastructure.adapter.FileMasterKeyProvider(keyFile),
+          4096);
+    } catch (java.io.IOException e) {
+      throw new java.io.UncheckedIOException(e);
+    }
+  }
+
+  /** The cutover tolerance a unit test runs under: off, like production after the migration. */
+  static com.krizaka.sovkora.assets.infrastructure.config.AssetEncryptionProperties
+      testEncryption() {
+    return new com.krizaka.sovkora.assets.infrastructure.config.AssetEncryptionProperties(
+        true, "unused", 4096, false);
+  }
+
+  @Test
+  void reconcile_afterARedeploy_theResultComesBackFromTheDurableStore() throws Exception {
+    var durable =
+        new com.krizaka.sovkora.assets.infrastructure.storage.DirectoryAssetStore(
+            tempDir.resolve("durable"));
+    // The executor wrote and mirrored the result; the redeploy then wiped the disk.
+    writeResult("job-9", "{\"answer\":\"42\"}");
+    Path written = tempDir.resolve(Path.of(USER_ID, "job-9", "output", "result.json"));
+    durable.put("t/acme/u/" + USER_ID + "/jobs/job-9/result.json", written);
+    Files.delete(written);
+    RouterProperties props =
+        new RouterProperties(
+            new RouterProperties.UploadsConfig(tempDir.toString(), "/uploads/**", 0));
+    var afterRedeploy =
+        new JobReconciliationService(
+            jobPersistenceProvider,
+            new ObjectMapper(),
+            props,
+            assets,
+            testEncryption(),
+            durable,
+            new com.krizaka.sovkora.assets.infrastructure.config.MediaStorageProperties(
+                "directory", null, null, "storage.bunnycdn.com", "x", "acme"));
+    when(jobPersistenceProvider.findJobsByStatuses(any())).thenReturn(List.of(pendingJob("job-9")));
+
+    afterRedeploy.reconcileOnStartup();
+
+    verify(jobPersistenceProvider).updateJobStatus(eq("job-9"), eq("COMPLETED"), any(), isNull());
+  }
+}
