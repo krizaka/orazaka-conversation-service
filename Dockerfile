@@ -27,6 +27,8 @@ RUN mvn clean package -pl orazaka-apps/services/orazaka-conversation-service -am
 
 # ── Runtime Stage ────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine@sha256:b48e02e0ea88d7bfb305335df94923bdef394905f4147dccd52e873cf17b1088
+# The shipped image takes the distribution's security fixes between two digest bumps of the base image (CVE-2026-85091, zlib, krizaka-internal#2773).
+RUN apk upgrade --no-cache
 WORKDIR /app
 
 # Create a non-privileged system group and user
