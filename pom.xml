@@ -5,22 +5,22 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.krizaka.orazaka</groupId>
-        <artifactId>orazaka-parent</artifactId>
+        <groupId>com.krizaka.sovkora</groupId>
+        <artifactId>sovkora-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../../../orazaka-libs/orazaka-build/orazaka-parent/pom.xml</relativePath>
+        <relativePath>../../../sovkora-libs/sovkora-build/sovkora-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>orazaka-conversation-service</artifactId>
-    <name>orazaka-conversation-service</name>
-    <description>Orazaka Conversation Service — interactive host (ex-router): HTTP/SSE ingress, job submission and SSE relay</description>
+    <artifactId>sovkora-conversation-service</artifactId>
+    <name>sovkora-conversation-service</name>
+    <description>Sovkora Conversation Service — interactive host (ex-router): HTTP/SSE ingress, job submission and SSE relay</description>
 
-    <url>https://github.com/krizaka/orazaka-conversation-service</url>
+    <url>https://github.com/krizaka/sovkora-conversation-service</url>
 
     <scm>
-        <url>https://github.com/krizaka/orazaka-conversation-service</url>
-        <connection>scm:git:https://github.com/krizaka/orazaka-conversation-service.git</connection>
-        <developerConnection>scm:git:git@github.com:krizaka/orazaka-conversation-service.git</developerConnection>
+        <url>https://github.com/krizaka/sovkora-conversation-service</url>
+        <connection>scm:git:https://github.com/krizaka/sovkora-conversation-service.git</connection>
+        <developerConnection>scm:git:git@github.com:krizaka/sovkora-conversation-service.git</developerConnection>
     </scm>
     <licenses>
         <license>
@@ -33,13 +33,13 @@
 
 
     <properties>
-        <!-- GitHub Packages repository this artifact is published to (orazaka-parent). -->
-        <orazaka.repository>orazaka-conversation-service</orazaka.repository>
+        <!-- GitHub Packages repository this artifact is published to (sovkora-parent). -->
+        <sovkora.repository>sovkora-conversation-service</sovkora.repository>
     </properties>
 
 
     <dependencies>
-        <!-- The Krizaka starters (krizaka-bom, imported by orazaka-parent): one dependency per
+        <!-- The Krizaka starters (krizaka-bom, imported by sovkora-parent): one dependency per
              capability, no version. web = krizaka-web (Problem Details, X-Request-Id, Jackson 3
              defaults, declared CORS) + Spring MVC + validation + actuator; security =
              krizaka-security (session JWT, service tokens) + Spring Security + resource server;
@@ -73,8 +73,8 @@
             <artifactId>krizaka-users-client</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-assets</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-assets</artifactId>
         </dependency>
         <dependency>
             <groupId>com.krizaka</groupId>
@@ -95,8 +95,8 @@
         </dependency>
         <!-- Internal Dependencies -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-core</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-core</artifactId>
         </dependency>
         <!-- Phase 2 cutover: the identity LIBRARY left this process - only the principal
              contract (User/UserProfile/RateLimitInfo + shared exceptions) remains; identity
@@ -109,42 +109,42 @@
         <!-- Tier-1 job-plane contract: the JobCommand wire record this service publishes. One
              definition, shared with the executor that deserialises it (ADR-037, audit #17). -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-jobs-api</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-jobs-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-tools</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-tools</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-business</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-business</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-persistence-app</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-persistence-app</artifactId>
         </dependency>
         <!-- Tier-1 Studio contract and client: a voice turn under an installation reads its pack's
              declarations from the studio service (ADR-076). Named here rather than reached through
-             orazaka-business, because this service calls it itself. -->
+             sovkora-business, because this service calls it itself. -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-studio-client</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-studio-client</artifactId>
         </dependency>
         <!-- Bridge: core DB-backed outbound ports (CapabilityProvider, PipelineConfigProvider, …)
              implemented against the persistence inbound ports. Shared with job-service so neither
              re-implements the same DB adapters. -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-persistence-bridge</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-persistence-bridge</artifactId>
         </dependency>
 
 
         <!-- ADR-030: Spring AI provider STARTERS removed. No autoconfigured Ollama/OpenAI
              beans — model clients are built programmatically from the DB (ai_providers +
-             orazaka_models) by the Dynamic Model Router / Universal Proxy Client in
-             orazaka-core. The `spring-ai-ollama` / `spring-ai-openai` model libraries
-             (the builder classes) are pulled transitively via orazaka-core. -->
+             sovkora_models) by the Dynamic Model Router / Universal Proxy Client in
+             sovkora-core. The `spring-ai-ollama` / `spring-ai-openai` model libraries
+             (the builder classes) are pulled transitively via sovkora-core. -->
 
 
         <!-- Rate Limiting Dependencies -->
@@ -181,8 +181,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-test-support</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-test-support</artifactId>
         </dependency>
         <!-- EventContractTest: the evt.turn.unmetered this service publishes conforms to
              krizaka-billing-api's schema. -->
@@ -196,8 +196,8 @@
              @AutoConfiguration SPI from META-INF/spring imports; @ConditionalOnBean guards
              ensure graceful degradation when upstream ports (ChatModel, ToolRegistry...) absent. -->
         <dependency>
-            <groupId>com.krizaka.orazaka</groupId>
-            <artifactId>orazaka-interceptors</artifactId>
+            <groupId>com.krizaka.sovkora</groupId>
+            <artifactId>sovkora-interceptors</artifactId>
         </dependency>
     </dependencies>
 

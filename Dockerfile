@@ -1,5 +1,5 @@
 # ==============================================================================
-# ORAZAKA — Dockerfile (Conversation Service)
+# SOVKORA — Dockerfile (Conversation Service)
 # ==============================================================================
 # Multi-stage container build targeting Eclipse Temurin JRE 21.
 # Compiles the service + its orazaka-libs dependencies hermetically.
@@ -20,7 +20,7 @@ COPY pom.xml .
 COPY orazaka-libs orazaka-libs
 COPY orazaka-apps/services/orazaka-conversation-service orazaka-apps/services/orazaka-conversation-service
 COPY orazaka-apps/workers orazaka-apps/workers
-COPY orazaka-end2end orazaka-end2end
+COPY sovkora-end2end sovkora-end2end
 
 # Compile the conversation-service module and its local orazaka-libs dependencies
 RUN mvn clean package -pl orazaka-apps/services/orazaka-conversation-service -am -DskipTests
@@ -30,7 +30,7 @@ FROM eclipse-temurin:21-jre-alpine@sha256:b48e02e0ea88d7bfb305335df94923bdef3949
 WORKDIR /app
 
 # Create a non-privileged system group and user
-RUN addgroup -S orazaka && adduser -S orazaka -G orazaka
+RUN addgroup -S sovkora && adduser -S sovkora -G sovkora
 
 # Configure secure JVM options for containerized environments
 ENV JAVA_OPTS="-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxRAMPercentage=75.0 -XX:MinRAMPercentage=50.0 -Djava.security.egd=file:/dev/./urandom"
@@ -40,13 +40,13 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Copy executable jar from builder stage
-COPY --from=builder /app/orazaka-apps/services/orazaka-conversation-service/target/orazaka-conversation-service-*.jar app.jar
+COPY --from=builder /app/orazaka-apps/services/orazaka-conversation-service/target/sovkora-conversation-service-*.jar app.jar
 
 # Enforce secure ownership on workspace files
-RUN chown -R orazaka:orazaka /app
+RUN chown -R sovkora:sovkora /app
 
 # Switch context to the non-root user
-USER orazaka
+USER sovkora
 
 # Launch the Spring Boot application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

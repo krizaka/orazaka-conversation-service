@@ -1,5 +1,5 @@
 -- ============================================================================
--- ORAZAKA — Local DB bootstrap · 20 — CONVERSATION CONTEXT
+-- SOVKORA — Local DB bootstrap · 20 — CONVERSATION CONTEXT
 -- ----------------------------------------------------------------------------
 -- Future owner: Conversation service (hosts business+core+interceptors — the
 -- interactive sync path: chat sessions, token-by-token SSE, memory windows).
@@ -29,7 +29,7 @@ CREATE TABLE orazaka_chat_messages (
 );
 CREATE INDEX idx_chat_messages_conversation ON orazaka_chat_messages (conversation_id, id);
 
--- The conversations a REGULATED pack's turns (voice, listening) are held in (orazaka#301). The memory above
+-- The conversations a REGULATED pack's turns (voice, listening) are held in (sovkora#301). The memory above
 -- is keyed by a conversation id the client chose and carries no owner, so this index says whose a protected
 -- conversation is: it lets the person erase it ("Delete all my wellbeing data") and lets the retention
 -- sweep age it out after the 30 days the consent statement states. It holds no content.
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS operator_audit (
 );
 CREATE INDEX IF NOT EXISTS idx_operator_audit_at ON operator_audit(at DESC);
 
--- orazaka-ai-engine#105: the checks' audit, with the caller's tenant (same block as infra/migrations/2026-10-27-product-checks-door.sql).
+-- sovkora-engine#105: the checks' audit, with the caller's tenant (same block as infra/migrations/2026-10-27-product-checks-door.sql).
 CREATE TABLE IF NOT EXISTS external_check_audit (
     id            BIGSERIAL    PRIMARY KEY,
     at            TIMESTAMPTZ  NOT NULL,

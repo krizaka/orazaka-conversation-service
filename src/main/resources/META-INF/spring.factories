@@ -1,2 +1,2 @@
 org.springframework.boot.EnvironmentPostProcessor=\
-com.krizaka.orazaka.conversationservice.infrastructure.config.ConversationServiceDefaults
+com.krizaka.sovkora.conversationservice.infrastructure.config.ConversationServiceDefaults

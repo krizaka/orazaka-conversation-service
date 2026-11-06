@@ -1,4 +1,4 @@
--- orazaka-ai-engine#105: the HTTP door for products to run external checks. Applied once to an existing database
+-- sovkora-engine#105: the HTTP door for products to run external checks. Applied once to an existing database
 -- (orazaka_db), as its owner role. Idempotent. The audit gains the caller's tenant (a pending check is collected only
 -- by the tenant that submitted it) and the provider's price; it accepts what the door can now write: PENDING, and
 -- REFUSED / NOT_CONFIGURED.

@@ -1,0 +1,182 @@
+package com.krizaka.sovkora.conversationservice.application.service;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.krizaka.sovkora.core.domain.model.Context;
+import com.krizaka.users.domain.model.User;
+import com.krizaka.users.domain.model.UserProfile;
+import com.krizaka.users.domain.port.UserDirectoryClient;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class ContextServiceTest {
+
+  private static User testUser() {
+    return new User(
+        UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+        "john",
+        "john@test.com",
+        true,
+        Set.of("ROLE_USER"),
+        Map.of("language", "en"),
+        null,
+        "free");
+  }
+
+  @Test
+  void resolve_nullProfile_setsBasicFields() {
+    var user = testUser();
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
+    org.mockito.Mockito.when(provider.getProfile(org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(null);
+
+    Context ctx = new ContextService(provider).resolve(user, "conv-1");
+
+    assertEquals(user.id().toString(), ctx.userId());
+    assertEquals("conv-1", ctx.conversationId());
+    assertEquals("en", ctx.preferences().get("preference.language"));
+    assertFalse(ctx.authorities().isEmpty());
+    assertNull(ctx.preferences().get("theme"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void resolve_withProfile_mergesPreferences() {
+    var user = testUser();
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
+    org.mockito.Mockito.when(provider.getProfile(org.mockito.ArgumentMatchers.anyString()))
+        .thenAnswer(
+            invocation ->
+                new UserProfile(
+                    invocation.getArgument(0),
+                    "dark",
+                    attributes(Map.of("extra", "value"), "shimmer", "finance", "creative")));
+
+    Context ctx = new ContextService(provider).resolve(user, "conv-2");
+
+    Map<String, Object> userProfileContext =
+        (Map<String, Object>) ctx.preferences().get(ContextService.USER_PROFILE_KEY);
+    assertNotNull(userProfileContext);
+    assertEquals("dark", userProfileContext.get("theme"));
+    assertEquals("shimmer", userProfileContext.get("voiceModel"));
+    assertEquals("finance", userProfileContext.get("primaryIndustry"));
+    assertEquals("creative", userProfileContext.get("aiBehavior"));
+    assertEquals("value", ctx.preferences().get("preference.extra"));
+  }
+
+  @Test
+  void resolve_placesEverythingTheUserWroteUnderTheirOwnNamespace() {
+    // ADR-064: the stored preferences and the profile's raw ones are both the user's writing. Any
+    // key of theirs — including one spelling the platform's namespace or the engine's own keys —
+    // arrives under preference., and the session under the platform's namespace.
+    User hostile =
+        new User(
+            UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+            "john",
+            "john@test.com",
+            true,
+            Set.of("ROLE_USER"),
+            Map.of("userId", "victim", "orazaka.metering.deferred", true),
+            null,
+            "free");
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
+    org.mockito.Mockito.when(provider.getProfile(org.mockito.ArgumentMatchers.anyString()))
+        .thenAnswer(
+            invocation ->
+                new UserProfile(
+                    invocation.getArgument(0),
+                    "dark",
+                    attributes(
+                        Map.of(
+                            "orazaka.guard.subject", "bonjour", Context.SESSION_ID_KEY, "forged"),
+                        "alloy",
+                        "tech",
+                        "friendly")));
+
+    Context ctx = new ContextService(provider).resolve(hostile, "conv-3");
+
+    assertEquals(
+        Set.of(
+            "preference.language", // User's own default, still the user's
+            "preference.userId",
+            "preference.orazaka.metering.deferred",
+            "preference.orazaka.guard.subject",
+            "preference." + Context.SESSION_ID_KEY,
+            Context.SESSION_ID_KEY,
+            ContextService.USER_PROFILE_KEY),
+        ctx.preferences().keySet());
+    assertNotEquals("forged", ctx.preferences().get(Context.SESSION_ID_KEY));
+  }
+
+  /** Sovkora's onboarding answers, as the users service stores them: plain profile attributes. */
+  private static Map<String, Object> attributes(
+      Map<String, Object> others, String voiceModel, String primaryIndustry, String aiBehavior) {
+    Map<String, Object> attributes = new java.util.HashMap<>(others);
+    attributes.put("voiceModel", voiceModel);
+    attributes.put("primaryIndustry", primaryIndustry);
+    attributes.put("aiBehavior", aiBehavior);
+    return attributes;
+  }
+
+  private static com.krizaka.billing.domain.model.EntitlementSnapshot plan(
+      String key, Map<String, String> entitlements) {
+    return new com.krizaka.billing.domain.model.EntitlementSnapshot(
+        "550e8400-e29b-41d4-a716-446655440000",
+        key,
+        entitlements,
+        100L,
+        java.time.Instant.now().plusSeconds(60));
+  }
+
+  private static Context resolveUnder(com.krizaka.billing.domain.model.EntitlementSnapshot plan) {
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
+    com.krizaka.billing.domain.port.EntitlementProvider entitlements =
+        org.mockito.Mockito.mock(com.krizaka.billing.domain.port.EntitlementProvider.class);
+    org.mockito.Mockito.when(entitlements.forActor(org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(plan);
+    return new ContextService(provider, entitlements).resolve(testUser(), "conv-r");
+  }
+
+  @Test
+  void resolve_planWithRetentionNone_declaresTheNoStorageMode() {
+    Context ctx = resolveUnder(plan("private", Map.of("retention.none", "true")));
+
+    assertTrue(ctx.retentionNone());
+    assertEquals("none", ctx.preferences().get(Context.RETENTION_KEY));
+  }
+
+  @Test
+  void resolve_planWithoutIt_keepsTheDefault() {
+    assertFalse(resolveUnder(plan("free", Map.of("capability.chat", "true"))).retentionNone());
+    assertFalse(resolveUnder(plan("free", Map.of("retention.none", "false"))).retentionNone());
+  }
+
+  @Test
+  void resolve_unresolvedPlan_keepsTheDefault() {
+    var unresolved =
+        com.krizaka.billing.domain.model.EntitlementSnapshot.unresolved(
+            "550e8400-e29b-41d4-a716-446655440000", java.time.Instant.now().plusSeconds(5));
+
+    assertFalse(resolveUnder(unresolved).retentionNone());
+  }
+
+  @Test
+  void resolve_aUserPreferenceNamedLikeTheModeCannotDeclareIt() {
+    // The platform alone declares it: a stored preference arrives under preference.*.
+    UserDirectoryClient provider = org.mockito.Mockito.mock(UserDirectoryClient.class);
+    var user =
+        new User(
+            UUID.randomUUID(),
+            "x",
+            "x@test.com",
+            true,
+            Set.of("ROLE_USER"),
+            Map.of("orazaka.retention", "none"),
+            null,
+            "free");
+
+    assertFalse(new ContextService(provider).resolve(user, "c").retentionNone());
+  }
+}

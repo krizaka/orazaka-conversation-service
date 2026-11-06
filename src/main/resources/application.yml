@@ -1,6 +1,6 @@
-# What a deployment decides; secrets from the environment (.env). Operating defaults: META-INF/orazaka/conversation-service-defaults.yml.
+# What a deployment decides; secrets from the environment (.env). Operating defaults: META-INF/sovkora/conversation-service-defaults.yml.
 spring:
-  application.name: orazaka-conversation-service
+  application.name: sovkora-conversation-service
   threads:
     virtual:
       enabled: true  # AGENTS.md §4 — an SSE stream holds its thread for the whole exchange
@@ -9,11 +9,11 @@ spring:
   data.redis.url: ${REDIS_URL:redis://localhost:6379}
 server.port: ${CONVERSATION_PORT:8080}
 krizaka:
-  observability: { product: orazaka, service: conversation, version: "@project.version@" }
+  observability: { product: sovkora, service: conversation, version: "@project.version@" }
   security.jwt.secret: ${IDENTITY_JWT_SECRET:}
   messaging.exchanges: { events: orazaka.events, dead-letter: orazaka.dlx }
   web.cors.allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
-  users.client: { base-url: "${IDENTITY_URL:http://localhost:8083}", service-secret: "${IDENTITY_JWT_SECRET:}", service-name: orazaka-conversation-service }
+  users.client: { base-url: "${IDENTITY_URL:http://localhost:8083}", service-secret: "${IDENTITY_JWT_SECRET:}", service-name: sovkora-conversation-service }
   billing: { enabled: "${BILLING_ENABLED:false}", base-url: "${BILLING_INTERNAL_URL:http://localhost:8095}", service-secret: "${IDENTITY_JWT_SECRET:}" }
 orazaka:
   core: { orchestration.enabled: "${ORCHESTRATION_ENABLED:true}", knowledge: { base-url: "${KNOWLEDGE_URL:http://localhost:8084}", service-secret: "${IDENTITY_JWT_SECRET:}" } }
