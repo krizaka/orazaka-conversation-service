@@ -28,9 +28,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 /**
- * The admin endpoints of the per-feature structured-output bound (sovkora-engine#172, rule «
- * admin configures everything »): read, replace, remove, a validated range, admin only, on the
- * audited operator surface.
+ * The admin endpoints of the per-feature structured-output bound (sovkora-engine#172, rule « admin
+ * configures everything »): read, replace, remove, a validated range, admin only, on the audited
+ * operator surface.
  */
 class FeatureStructuredBoundAdminControllerTest {
 

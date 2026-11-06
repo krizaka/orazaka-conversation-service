@@ -9,8 +9,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * The administrator's side of the prompt-cache policy (ADR-094 §4.5, sovkora-engine#173): what
- * of a feature's prompt a provider may cache ({@code NONE}, {@code SYSTEM_ONLY}, {@code
+ * The administrator's side of the prompt-cache policy (ADR-094 §4.5, sovkora-engine#173): what of a
+ * feature's prompt a provider may cache ({@code NONE}, {@code SYSTEM_ONLY}, {@code
  * SYSTEM_AND_TOOLS}). A database row, never a constant; a SENSITIVE turn is never cached whatever
  * the row says. Administrators only; every write is on the operator surface and leaves an audit
  * line ({@link OperatorAuditPaths}).

@@ -8,10 +8,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * The administrator's side of the structured-output bound (ADR-094 §4.6, sovkora-engine#172):
- * the most answers a feature key's call may ask a model for (read, replace, remove). A database
- * row, never a constant. Administrators only; every write is on the operator surface and leaves an
- * audit line ({@link OperatorAuditPaths}).
+ * The administrator's side of the structured-output bound (ADR-094 §4.6, sovkora-engine#172): the
+ * most answers a feature key's call may ask a model for (read, replace, remove). A database row,
+ * never a constant. Administrators only; every write is on the operator surface and leaves an audit
+ * line ({@link OperatorAuditPaths}).
  */
 @RestController
 @RequestMapping("/api/v1/models/admin/feature-structured-bounds")

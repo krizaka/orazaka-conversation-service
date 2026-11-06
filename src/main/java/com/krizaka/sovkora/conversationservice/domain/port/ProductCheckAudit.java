@@ -6,10 +6,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * The audit of the checks a product asks for through the HTTP door (sovkora-engine#105): one
- * line per call, refused or not, written under the caller's tenant, and the memory of what each
- * provider reference was asked for, so that a pending check is collected only by the tenant that
- * submitted it.
+ * The audit of the checks a product asks for through the HTTP door (sovkora-engine#105): one line
+ * per call, refused or not, written under the caller's tenant, and the memory of what each provider
+ * reference was asked for, so that a pending check is collected only by the tenant that submitted
+ * it.
  */
 public interface ProductCheckAudit {
 

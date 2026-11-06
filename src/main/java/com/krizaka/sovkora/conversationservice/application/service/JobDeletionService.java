@@ -22,8 +22,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Deletes what a user generated (sovkora-web#86): the files leave every store, then the job
- * row becomes a tombstone ({@code DELETED}, result cleared, prompt and facts kept).
+ * Deletes what a user generated (sovkora-web#86): the files leave every store, then the job row
+ * becomes a tombstone ({@code DELETED}, result cleared, prompt and facts kept).
  *
  * <p>Order matters: files first, row second. A store that refuses leaves the row as it was, so the
  * same call can simply be made again; the opposite order would leave files nobody can find to

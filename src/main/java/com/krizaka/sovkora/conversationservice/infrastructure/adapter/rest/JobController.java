@@ -138,8 +138,8 @@ public class JobController {
   }
 
   /**
-   * Deletes a finished job's result: files out of every store, row marked deleted
-   * (sovkora-web#86). Owner only (404 for anyone else); an admin may delete for a user.
+   * Deletes a finished job's result: files out of every store, row marked deleted (sovkora-web#86).
+   * Owner only (404 for anyone else); an admin may delete for a user.
    */
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> deleteJob(

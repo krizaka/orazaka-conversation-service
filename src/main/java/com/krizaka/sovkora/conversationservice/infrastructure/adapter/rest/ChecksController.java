@@ -27,11 +27,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The door for products to run external checks through Sovkora (sovkora-engine#105, ADR-090):
- * court records and credit, submitted and, when the provider answers later, collected. The caller
- * is the verified actor of the session (ADR-091), never a field of the body; the tenant is the
- * actor's. The answer is the engine's closed {@code CheckResult}: an outcome and a category, no
- * record. Identity checks are not offered here.
+ * The door for products to run external checks through Sovkora (sovkora-engine#105, ADR-090): court
+ * records and credit, submitted and, when the provider answers later, collected. The caller is the
+ * verified actor of the session (ADR-091), never a field of the body; the tenant is the actor's.
+ * The answer is the engine's closed {@code CheckResult}: an outcome and a category, no record.
+ * Identity checks are not offered here.
  */
 @RestController
 @RequestMapping("/api/v1/checks")

@@ -22,8 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * The owner deletes a generated result (sovkora-web#86): files gone from every store, row
- * marked.
+ * The owner deletes a generated result (sovkora-web#86): files gone from every store, row marked.
  */
 class JobDeletionServiceTest {
 
